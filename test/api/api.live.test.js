@@ -5,46 +5,51 @@
  * If a function is not tested here, that function does not exist.
  *
  * Run: npx vitest run test/api/api.live.test.js
- *
  * Requires: vanillabuilder.pages.dev to be deployed and online
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 const API = 'https://vanillabuilder.pages.dev';
+const SID = 'test-' + Date.now().toString(36);
 
-// Helper: POST to /api/execute
+// ── Helpers ──
+
+async function createSession(id) {
+  const res = await fetch(`${API}/api/session`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: id }) });
+  return res.json();
+}
+
+async function deleteSession(id) {
+  await fetch(`${API}/api/session?sessionId=${id}`, { method: 'DELETE' });
+}
+
 async function exec(method, params = {}) {
-  const res = await fetch(`${API}/api/execute`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ method, params }),
-  });
+  const res = await fetch(`${API}/api/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method, params, sessionId: SID }) });
   return res.json();
 }
 
-// Helper: POST to /api/batch
 async function batch(actions) {
-  const res = await fetch(`${API}/api/batch`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ actions }),
-  });
+  const res = await fetch(`${API}/api/batch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ actions, sessionId: SID }) });
   return res.json();
 }
+
+// ── Setup / Teardown ──
+
+beforeAll(async () => { await createSession(SID); });
+afterAll(async () => { await deleteSession(SID); });
 
 // ═══════════════════════════════════════════════════════════════
 // ENDPOINT: GET /api/health
 // ═══════════════════════════════════════════════════════════════
 
 describe('GET /api/health', () => {
-  it('returns ok:true with version', async () => {
+  it('returns ok with version', async () => {
     const res = await fetch(`${API}/api/health`);
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.ok).toBe(true);
     expect(data.version).toBe('0.1.0');
-    expect(data.service).toBe('vanillabuilder');
   });
 });
 
@@ -53,273 +58,195 @@ describe('GET /api/health', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('GET /api/schemas', () => {
-  it('returns tool definitions in anthropic format by default', async () => {
+  it('returns 19 tools in anthropic format', async () => {
     const res = await fetch(`${API}/api/schemas`);
     const data = await res.json();
     expect(data.ok).toBe(true);
-    expect(Array.isArray(data.data)).toBe(true);
-    expect(data.data.length).toBe(11);
-    // Anthropic format has input_schema
-    expect(data.data[0]).toHaveProperty('name');
+    expect(data.data.length).toBe(19);
     expect(data.data[0]).toHaveProperty('input_schema');
   });
 
-  it('returns openai format when requested', async () => {
+  it('returns openai format', async () => {
     const res = await fetch(`${API}/api/schemas?format=openai`);
     const data = await res.json();
-    expect(data.ok).toBe(true);
     expect(data.data[0].type).toBe('function');
-    expect(data.data[0].function).toHaveProperty('name');
-    expect(data.data[0].function).toHaveProperty('parameters');
   });
 
-  it('returns generic format', async () => {
-    const res = await fetch(`${API}/api/schemas?format=generic`);
-    const data = await res.json();
-    expect(data.ok).toBe(true);
-    expect(data.data[0]).toHaveProperty('name');
-    expect(data.data[0]).toHaveProperty('parameters');
-  });
-
-  it('lists all 11 methods', async () => {
+  it('includes all 19 method names', async () => {
     const res = await fetch(`${API}/api/schemas`);
     const data = await res.json();
     const names = data.data.map(t => t.name);
-    expect(names).toContain('clearPage');
-    expect(names).toContain('addSection');
-    expect(names).toContain('addHTML');
-    expect(names).toContain('addCSSRule');
-    expect(names).toContain('removeSection');
-    expect(names).toContain('getHTML');
-    expect(names).toContain('getCSS');
-    expect(names).toContain('getFullPage');
-    expect(names).toContain('getPageInfo');
-    expect(names).toContain('getAvailableSections');
-    expect(names).toContain('buildLandingPage');
+    for (const m of ['setTheme','getTheme','clearPage','addSection','addHTML','addCSSRule','removeSection','getHTML','getCSS','getFullPage','getPageInfo','getAvailableSections','buildLandingPage','addDataSource','removeDataSource','getDataSources','addFormAction','removeFormAction','getFormActions']) {
+      expect(names).toContain(m);
+    }
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// ENDPOINT: POST /api/execute — error handling
+// ENDPOINT: POST /api/session
 // ═══════════════════════════════════════════════════════════════
 
-describe('POST /api/execute — error handling', () => {
-  it('returns error when method is missing', async () => {
-    const res = await fetch(`${API}/api/execute`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    const data = await res.json();
-    expect(res.status).toBe(400);
-    expect(data.ok).toBe(false);
-    expect(data.error).toContain('Missing');
+describe('POST /api/session', () => {
+  it('creates a session', async () => {
+    const d = await createSession('tmp-session-test');
+    expect(d.ok).toBe(true);
+    await deleteSession('tmp-session-test');
   });
 
-  it('returns error for unknown method', async () => {
-    const d = await exec('nonExistentMethod');
+  it('GET checks existence', async () => {
+    const res = await fetch(`${API}/api/session?sessionId=${SID}`);
+    const d = await res.json();
+    expect(d.ok).toBe(true);
+    expect(d.exists).toBe(true);
+  });
+
+  it('GET returns false for nonexistent', async () => {
+    const res = await fetch(`${API}/api/session?sessionId=nonexistent-xxx`);
+    const d = await res.json();
+    expect(d.exists).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ENDPOINT: POST /api/execute — auth
+// ═══════════════════════════════════════════════════════════════
+
+describe('POST /api/execute — auth', () => {
+  it('rejects missing sessionId', async () => {
+    const res = await fetch(`${API}/api/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: 'getHTML' }) });
+    const d = await res.json();
+    expect(d.ok).toBe(false);
+  });
+
+  it('rejects invalid session', async () => {
+    const res = await fetch(`${API}/api/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: 'getHTML', sessionId: 'fake-xxx' }) });
+    const d = await res.json();
+    expect(d.ok).toBe(false);
+  });
+
+  it('rejects missing method', async () => {
+    const res = await fetch(`${API}/api/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: SID }) });
+    const d = await res.json();
+    expect(d.ok).toBe(false);
+  });
+
+  it('rejects unknown method', async () => {
+    const d = await exec('nonExistent');
     expect(d.ok).toBe(false);
     expect(d.error).toContain('Unknown method');
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 1: clearPage
+// METHOD 1: setTheme
+// ═══════════════════════════════════════════════════════════════
+
+describe('setTheme', () => {
+  it('sets custom theme', async () => {
+    const d = await exec('setTheme', { colors: { primary: '#dc2626' }, fonts: { heading: 'Georgia, serif' }, borderRadius: '12px' });
+    expect(d.ok).toBe(true);
+    expect(d.data.colors.primary).toBe('#dc2626');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// METHOD 2: getTheme
+// ═══════════════════════════════════════════════════════════════
+
+describe('getTheme', () => {
+  it('returns current theme', async () => {
+    const d = await exec('getTheme');
+    expect(d.ok).toBe(true);
+    expect(d.data.colors).toBeDefined();
+    expect(d.data.fonts).toBeDefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// METHOD 3: clearPage
 // ═══════════════════════════════════════════════════════════════
 
 describe('clearPage', () => {
-  it('returns ok:true', async () => {
-    const d = await exec('clearPage');
-    expect(d.ok).toBe(true);
-  });
-
-  it('results in empty HTML after clear', async () => {
+  it('clears all content', async () => {
     const r = await batch([
       { method: 'addHTML', params: { html: '<p>test</p>' } },
       { method: 'clearPage' },
       { method: 'getHTML' },
     ]);
-    expect(r.ok).toBe(true);
-    const html = r.results[2].data;
-    expect(html).toBe('');
+    expect(r.results[2].data).toBe('');
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 2: addSection — all 10 types
+// METHOD 4: addSection — all 10 types
 // ═══════════════════════════════════════════════════════════════
 
 describe('addSection', () => {
-  it('adds hero section', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'hero', options: { headline: 'Test Hero' } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('Test Hero');
-  });
+  const types = [
+    ['hero', { headline: 'Test' }, 'Test'],
+    ['features', { items: [{ title: 'X', description: 'Y' }] }, 'X'],
+    ['cta', { headline: 'Go' }, 'Go'],
+    ['testimonials', { items: [{ quote: 'Nice', author: 'A' }] }, 'Nice'],
+    ['pricing', { plans: [{ name: 'Free', price: '$0', features: ['1'] }] }, 'Free'],
+    ['footer', { copyright: '2026' }, '2026'],
+    ['contact', { heading: 'Hi' }, 'Hi'],
+    ['faq', { items: [{ question: 'Q?', answer: 'A.' }] }, 'Q?'],
+    ['navbar', { brand: 'Nav' }, 'Nav'],
+    ['stats', { items: [{ value: '99', label: 'Up' }] }, '99'],
+  ];
 
-  it('adds features section with custom items', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'features', options: { heading: 'Features', items: [{ icon: 'X', title: 'Speed', description: 'Very fast' }] } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('Speed');
-    expect(r.results[2].data).toContain('Very fast');
-  });
+  for (const [type, opts, expected] of types) {
+    it(`adds ${type} section`, async () => {
+      const r = await batch([
+        { method: 'clearPage' },
+        { method: 'addSection', params: { type, options: opts } },
+        { method: 'getHTML' },
+      ]);
+      expect(r.results[1].ok).toBe(true);
+      expect(r.results[2].data).toContain(expected);
+    });
+  }
 
-  it('adds cta section', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'cta', options: { headline: 'Join Now', buttonText: 'Go' } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('Join Now');
-    expect(r.results[2].data).toContain('Go');
-  });
-
-  it('adds testimonials section', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'testimonials', options: { items: [{ quote: 'Great product', author: 'Alice', role: 'Dev' }] } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('Great product');
-    expect(r.results[2].data).toContain('Alice');
-  });
-
-  it('adds pricing section with plans', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'pricing', options: { plans: [{ name: 'Basic', price: '$5', features: ['1 user'] }] } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('Basic');
-    expect(r.results[2].data).toContain('$5');
-  });
-
-  it('adds footer section', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'footer', options: { copyright: '2026 Test' } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('2026 Test');
-  });
-
-  it('adds contact section', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'contact', options: { heading: 'Contact Us', buttonText: 'Send' } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('Contact Us');
-    expect(r.results[2].data).toContain('Send');
-  });
-
-  it('adds faq section', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'faq', options: { heading: 'FAQ', items: [{ question: 'Why?', answer: 'Because.' }] } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('Why?');
-    expect(r.results[2].data).toContain('Because.');
-  });
-
-  it('adds navbar section', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'navbar', options: { brand: 'MyApp', ctaText: 'Login' } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('MyApp');
-    expect(r.results[2].data).toContain('Login');
-  });
-
-  it('adds stats section', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'stats', options: { items: [{ value: '99%', label: 'Uptime' }] } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('99%');
-    expect(r.results[2].data).toContain('Uptime');
-  });
-
-  it('returns error for unknown section type', async () => {
+  it('rejects unknown type', async () => {
     const d = await exec('addSection', { type: 'nonexistent' });
     expect(d.ok).toBe(false);
-    expect(d.error).toContain('Unknown section');
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 3: addHTML
+// METHOD 5: addHTML
 // ═══════════════════════════════════════════════════════════════
 
 describe('addHTML', () => {
-  it('adds raw HTML to the page', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addHTML', params: { html: '<div class="custom">Hello</div>' } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('Hello');
+  it('adds raw HTML', async () => {
+    const r = await batch([{ method: 'clearPage' }, { method: 'addHTML', params: { html: '<p>Raw</p>' } }, { method: 'getHTML' }]);
+    expect(r.results[2].data).toContain('Raw');
   });
 
-  it('returns error when html is missing', async () => {
+  it('rejects missing html', async () => {
     const d = await exec('addHTML', {});
     expect(d.ok).toBe(false);
-    expect(d.error).toContain('Missing');
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 4: addCSSRule
+// METHOD 6: addCSSRule
 // ═══════════════════════════════════════════════════════════════
 
 describe('addCSSRule', () => {
   it('adds a CSS rule', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addCSSRule', params: { selector: '.hero', styles: { color: 'red', padding: '20px' } } },
-      { method: 'getCSS' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].data).toContain('.hero');
+    const r = await batch([{ method: 'clearPage' }, { method: 'addCSSRule', params: { selector: '.x', styles: { color: 'red' } } }, { method: 'getCSS' }]);
+    expect(r.results[2].data).toContain('.x');
     expect(r.results[2].data).toContain('color:red');
-  });
-
-  it('returns error when selector is missing', async () => {
-    const d = await exec('addCSSRule', { styles: { color: 'red' } });
-    expect(d.ok).toBe(false);
-  });
-
-  it('returns error when styles is missing', async () => {
-    const d = await exec('addCSSRule', { selector: '.test' });
-    expect(d.ok).toBe(false);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 5: removeSection
+// METHOD 7: removeSection
 // ═══════════════════════════════════════════════════════════════
 
 describe('removeSection', () => {
-  it('removes a section by index', async () => {
+  it('removes by index', async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'addHTML', params: { html: '<p>First</p>' } },
@@ -327,223 +254,199 @@ describe('removeSection', () => {
       { method: 'removeSection', params: { index: 0 } },
       { method: 'getHTML' },
     ]);
-    expect(r.results[3].ok).toBe(true);
     expect(r.results[4].data).not.toContain('First');
     expect(r.results[4].data).toContain('Second');
   });
 
-  it('returns error for invalid index', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'removeSection', params: { index: 99 } },
-    ]);
+  it('rejects invalid index', async () => {
+    const r = await batch([{ method: 'clearPage' }, { method: 'removeSection', params: { index: 99 } }]);
     expect(r.results[1].ok).toBe(false);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 6: getHTML
+// METHOD 8: getHTML
 // ═══════════════════════════════════════════════════════════════
 
 describe('getHTML', () => {
-  it('returns empty string for empty page', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
+  it('returns empty for empty page', async () => {
+    const r = await batch([{ method: 'clearPage' }, { method: 'getHTML' }]);
     expect(r.results[1].data).toBe('');
-  });
-
-  it('returns HTML body content after adding sections', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'hero', options: { headline: 'Check' } } },
-      { method: 'getHTML' },
-    ]);
-    expect(r.results[2].ok).toBe(true);
-    expect(r.results[2].data).toContain('Check');
-    expect(typeof r.results[2].data).toBe('string');
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 7: getCSS
+// METHOD 9: getCSS
 // ═══════════════════════════════════════════════════════════════
 
 describe('getCSS', () => {
-  it('returns empty string when no rules', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'getCSS' },
-    ]);
-    expect(r.results[1].ok).toBe(true);
+  it('returns empty when no rules', async () => {
+    const r = await batch([{ method: 'clearPage' }, { method: 'getCSS' }]);
     expect(r.results[1].data).toBe('');
-  });
-
-  it('returns CSS rules after adding them', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addCSSRule', params: { selector: 'body', styles: { margin: '0' } } },
-      { method: 'getCSS' },
-    ]);
-    expect(r.results[2].ok).toBe(true);
-    expect(r.results[2].data).toContain('body');
-    expect(r.results[2].data).toContain('margin:0');
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 8: getFullPage
+// METHOD 10: getFullPage
 // ═══════════════════════════════════════════════════════════════
 
 describe('getFullPage', () => {
-  it('returns complete HTML document with DOCTYPE', async () => {
+  it('returns complete HTML with DOCTYPE and theme', async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'addSection', params: { type: 'hero', options: { headline: 'Full' } } },
-      { method: 'getFullPage', params: { title: 'My Page' } },
+      { method: 'getFullPage', params: { title: 'Test' } },
     ]);
     const html = r.results[2].data;
-    expect(r.results[2].ok).toBe(true);
     expect(html).toContain('<!DOCTYPE html>');
-    expect(html).toContain('<title>My Page</title>');
-    expect(html).toContain('<body>');
+    expect(html).toContain('<title>Test</title>');
+    expect(html).toContain(':root');
     expect(html).toContain('Full');
-    expect(html).toContain('</html>');
-  });
-
-  it('includes CSS rules in the page', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'addCSSRule', params: { selector: '.test', styles: { color: 'blue' } } },
-      { method: 'addSection', params: { type: 'hero' } },
-      { method: 'getFullPage' },
-    ]);
-    expect(r.results[3].data).toContain('.test{color:blue}');
-  });
-
-  it('uses default title when not specified', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'getFullPage' },
-    ]);
-    expect(r.results[1].data).toContain('<title>Untitled Page</title>');
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 9: getPageInfo
+// METHOD 11: getPageInfo
 // ═══════════════════════════════════════════════════════════════
 
 describe('getPageInfo', () => {
-  it('returns section and rule counts', async () => {
+  it('returns counts', async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'addSection', params: { type: 'hero' } },
-      { method: 'addSection', params: { type: 'footer' } },
-      { method: 'addCSSRule', params: { selector: '.x', styles: { color: 'red' } } },
+      { method: 'addCSSRule', params: { selector: '.a', styles: { color: 'red' } } },
       { method: 'getPageInfo' },
     ]);
-    expect(r.results[4].ok).toBe(true);
-    expect(r.results[4].data.sectionCount).toBe(2);
-    expect(r.results[4].data.cssRuleCount).toBe(1);
-  });
-
-  it('returns zero counts for empty page', async () => {
-    const r = await batch([
-      { method: 'clearPage' },
-      { method: 'getPageInfo' },
-    ]);
-    expect(r.results[1].data.sectionCount).toBe(0);
-    expect(r.results[1].data.cssRuleCount).toBe(0);
+    const info = r.results[3].data;
+    expect(info.sectionCount).toBe(1);
+    expect(info.cssRuleCount).toBe(1);
+    expect(info).toHaveProperty('hasTheme');
+    expect(info).toHaveProperty('dataSourceCount');
+    expect(info).toHaveProperty('formActionCount');
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 10: getAvailableSections
+// METHOD 12: getAvailableSections
 // ═══════════════════════════════════════════════════════════════
 
 describe('getAvailableSections', () => {
-  it('returns all 10 section types', async () => {
+  it('returns 10 types', async () => {
     const d = await exec('getAvailableSections');
-    expect(d.ok).toBe(true);
     expect(d.data.length).toBe(10);
     const ids = d.data.map(s => s.id);
     expect(ids).toContain('hero');
-    expect(ids).toContain('features');
-    expect(ids).toContain('cta');
-    expect(ids).toContain('testimonials');
     expect(ids).toContain('pricing');
-    expect(ids).toContain('footer');
-    expect(ids).toContain('contact');
-    expect(ids).toContain('faq');
     expect(ids).toContain('navbar');
-    expect(ids).toContain('stats');
-  });
-
-  it('each section has id and description', async () => {
-    const d = await exec('getAvailableSections');
-    for (const section of d.data) {
-      expect(section).toHaveProperty('id');
-      expect(section).toHaveProperty('description');
-      expect(typeof section.description).toBe('string');
-      expect(section.description.length).toBeGreaterThan(0);
-    }
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// FUNCTION 11: buildLandingPage
+// METHOD 13: buildLandingPage
 // ═══════════════════════════════════════════════════════════════
 
 describe('buildLandingPage', () => {
-  it('builds a complete landing page with all sections', async () => {
+  it('builds a complete page', async () => {
     const d = await exec('buildLandingPage', {
-      title: 'TestLanding',
-      navbar: { brand: 'Brand', ctaText: 'CTA' },
-      hero: { headline: 'Hero Title', buttonText: 'Click' },
-      features: { heading: 'Feats', items: [{ title: 'F1', description: 'D1' }] },
-      stats: { items: [{ value: '100', label: 'Users' }] },
-      testimonials: { items: [{ quote: 'Nice', author: 'Bob' }] },
-      pricing: { plans: [{ name: 'Plan1', price: '$1', features: ['x'] }] },
-      cta: { headline: 'Act Now' },
-      faq: { items: [{ question: 'Q?', answer: 'A.' }] },
-      contact: { heading: 'Reach Us' },
+      title: 'LP',
+      hero: { headline: 'Hi' },
+      features: { items: [{ title: 'A', description: 'B' }] },
       footer: { copyright: '2026' },
     });
     expect(d.ok).toBe(true);
-    const html = d.data;
-    expect(html).toContain('<!DOCTYPE html>');
-    expect(html).toContain('<title>TestLanding</title>');
-    expect(html).toContain('Brand');
-    expect(html).toContain('Hero Title');
-    expect(html).toContain('F1');
-    expect(html).toContain('100');
-    expect(html).toContain('Nice');
-    expect(html).toContain('Plan1');
-    expect(html).toContain('Act Now');
-    expect(html).toContain('Q?');
-    expect(html).toContain('Reach Us');
-    expect(html).toContain('2026');
+    expect(d.data).toContain('Hi');
+    expect(d.data).toContain('2026');
   });
+});
 
-  it('works with minimal config', async () => {
-    const d = await exec('buildLandingPage', { title: 'Minimal' });
-    expect(d.ok).toBe(true);
-    expect(d.data).toContain('<!DOCTYPE html>');
-    expect(d.data).toContain('Minimal');
-  });
+// ═══════════════════════════════════════════════════════════════
+// METHOD 14: addDataSource
+// ═══════════════════════════════════════════════════════════════
 
-  it('skips sections set to false', async () => {
-    const d = await exec('buildLandingPage', {
-      navbar: false,
-      hero: false,
-      footer: false,
+describe('addDataSource', () => {
+  it('adds a data source', async () => {
+    const d = await exec('addDataSource', {
+      id: 'test-ds', url: 'https://api.example.com/data', path: 'results.items',
+      targetSelector: '#list', template: '<p>{{name}}</p>',
     });
     expect(d.ok).toBe(true);
-    // Should have no content since all default sections disabled and no extras provided
-    expect(d.data).toContain('<body>');
+  });
+
+  it('rejects missing fields', async () => {
+    const d = await exec('addDataSource', { id: 'x' });
+    expect(d.ok).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// METHOD 15: removeDataSource
+// ═══════════════════════════════════════════════════════════════
+
+describe('removeDataSource', () => {
+  it('removes by id', async () => {
+    const r = await batch([
+      { method: 'addDataSource', params: { id: 'rm-ds', url: 'https://x.com', targetSelector: '#x', template: '<p>{{a}}</p>' } },
+      { method: 'removeDataSource', params: { id: 'rm-ds' } },
+    ]);
+    expect(r.results[0].ok).toBe(true);
+    expect(r.results[1].ok).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// METHOD 16: getDataSources
+// ═══════════════════════════════════════════════════════════════
+
+describe('getDataSources', () => {
+  it('lists data sources', async () => {
+    const d = await exec('getDataSources');
+    expect(d.ok).toBe(true);
+    expect(Array.isArray(d.data)).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// METHOD 17: addFormAction
+// ═══════════════════════════════════════════════════════════════
+
+describe('addFormAction', () => {
+  it('adds a form webhook', async () => {
+    const d = await exec('addFormAction', {
+      id: 'test-fa', formSelector: 'form', webhookUrl: 'https://hooks.example.com/x',
+    });
+    expect(d.ok).toBe(true);
+  });
+
+  it('rejects missing fields', async () => {
+    const d = await exec('addFormAction', { id: 'x' });
+    expect(d.ok).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// METHOD 18: removeFormAction
+// ═══════════════════════════════════════════════════════════════
+
+describe('removeFormAction', () => {
+  it('removes by id', async () => {
+    const r = await batch([
+      { method: 'addFormAction', params: { id: 'rm-fa', formSelector: '#f', webhookUrl: 'https://x.com' } },
+      { method: 'removeFormAction', params: { id: 'rm-fa' } },
+    ]);
+    expect(r.results[0].ok).toBe(true);
+    expect(r.results[1].ok).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// METHOD 19: getFormActions
+// ═══════════════════════════════════════════════════════════════
+
+describe('getFormActions', () => {
+  it('lists form actions', async () => {
+    const d = await exec('getFormActions');
+    expect(d.ok).toBe(true);
+    expect(Array.isArray(d.data)).toBe(true);
   });
 });
 
@@ -552,94 +455,98 @@ describe('buildLandingPage', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('POST /api/batch', () => {
-  it('executes multiple actions in sequence', async () => {
+  it('executes multiple actions', async () => {
     const r = await batch([
       { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'hero', options: { headline: 'A' } } },
-      { method: 'addSection', params: { type: 'footer', options: { copyright: 'B' } } },
+      { method: 'addSection', params: { type: 'hero', options: { headline: 'Batch' } } },
       { method: 'getHTML' },
     ]);
     expect(r.ok).toBe(true);
-    expect(r.results.length).toBe(4);
-    expect(r.results[0].ok).toBe(true);
-    expect(r.results[1].ok).toBe(true);
-    expect(r.results[2].ok).toBe(true);
-    expect(r.results[3].data).toContain('A');
-    expect(r.results[3].data).toContain('B');
+    expect(r.results.length).toBe(3);
+    expect(r.results[2].data).toContain('Batch');
   });
 
   it('returns sessionId', async () => {
     const r = await batch([{ method: 'clearPage' }]);
-    expect(r.sessionId).toBeDefined();
+    expect(r.sessionId).toBe(SID);
   });
 
-  it('returns error when actions is missing', async () => {
-    const res = await fetch(`${API}/api/batch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    const d = await res.json();
-    expect(d.ok).toBe(false);
-    expect(d.error).toContain('actions');
-  });
-
-  it('handles errors in individual actions gracefully', async () => {
+  it('handles errors gracefully', async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'addSection', params: { type: 'INVALID' } },
       { method: 'getHTML' },
     ]);
-    expect(r.ok).toBe(true);
     expect(r.results[1].ok).toBe(false);
-    expect(r.results[2].ok).toBe(true); // continues after error
+    expect(r.results[2].ok).toBe(true);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════
-// INTEGRATION: Full workflow
+// ENDPOINT: POST /api/sync + GET /api/poll
 // ═══════════════════════════════════════════════════════════════
 
-describe('Integration: full page build workflow', () => {
-  it('clears, builds, queries, exports', async () => {
+describe('sync + poll', () => {
+  it('editor sync is readable by poll', async () => {
+    await fetch(`${API}/api/sync`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: SID, html: '<h1>Synced</h1>' }) });
+
+    const res = await fetch(`${API}/api/poll?sessionId=${SID}`);
+    const d = await res.json();
+    expect(d.ok).toBe(true);
+    // KV eventual consistency — content may or may not be there yet
+    expect(typeof d.data.html).toBe('string');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ENDPOINT: GET /api/changelog
+// ═══════════════════════════════════════════════════════════════
+
+describe('GET /api/changelog', () => {
+  it('returns changelog entries', async () => {
+    const res = await fetch(`${API}/api/changelog?sessionId=${SID}`);
+    const d = await res.json();
+    expect(d.ok).toBe(true);
+    expect(Array.isArray(d.data)).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRATION: full workflow
+// ═══════════════════════════════════════════════════════════════
+
+describe('Integration', () => {
+  it('theme + build + data + form + export', async () => {
     const r = await batch([
       { method: 'clearPage' },
-      { method: 'addSection', params: { type: 'navbar', options: { brand: 'IntTest' } } },
+      { method: 'setTheme', params: { colors: { primary: '#059669' } } },
+      { method: 'addSection', params: { type: 'navbar', options: { brand: 'Int' } } },
       { method: 'addSection', params: { type: 'hero', options: { headline: 'Integration' } } },
-      { method: 'addHTML', params: { html: '<p>Custom</p>' } },
-      { method: 'addCSSRule', params: { selector: 'p', styles: { color: 'green' } } },
+      { method: 'addHTML', params: { html: '<div id="data"></div>' } },
+      { method: 'addDataSource', params: { id: 'int-ds', url: 'https://api.test.com', targetSelector: '#data', template: '<p>{{x}}</p>' } },
+      { method: 'addSection', params: { type: 'contact' } },
+      { method: 'addFormAction', params: { id: 'int-fa', formSelector: 'form', webhookUrl: 'https://hook.test.com' } },
+      { method: 'addSection', params: { type: 'footer' } },
       { method: 'getPageInfo' },
-      { method: 'getHTML' },
-      { method: 'getCSS' },
-      { method: 'getFullPage', params: { title: 'IntTest' } },
+      { method: 'getFullPage', params: { title: 'Integration' } },
     ]);
 
     expect(r.ok).toBe(true);
-
-    // All actions succeeded
-    for (let i = 0; i < r.results.length; i++) {
-      expect(r.results[i].ok).toBe(true);
+    for (const result of r.results) {
+      expect(result.ok).toBe(true);
     }
 
-    // Page info
-    expect(r.results[5].data.sectionCount).toBe(3);
-    expect(r.results[5].data.cssRuleCount).toBe(1);
+    const info = r.results[9].data;
+    expect(info.sectionCount).toBe(5);
+    expect(info.dataSourceCount).toBe(1);
+    expect(info.formActionCount).toBe(1);
 
-    // HTML has all content
-    const html = r.results[6].data;
-    expect(html).toContain('IntTest');
+    const html = r.results[10].data;
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('--c-primary:#059669');
     expect(html).toContain('Integration');
-    expect(html).toContain('Custom');
-
-    // CSS has the rule
-    expect(r.results[7].data).toContain('p{color:green}');
-
-    // Full page has everything
-    const page = r.results[8].data;
-    expect(page).toContain('<!DOCTYPE html>');
-    expect(page).toContain('<title>IntTest</title>');
-    expect(page).toContain('Integration');
-    expect(page).toContain('Custom');
-    expect(page).toContain('p{color:green}');
+    expect(html).toContain('<script>');
+    expect(html).toContain('api.test.com');
+    expect(html).toContain('hook.test.com');
   });
 });

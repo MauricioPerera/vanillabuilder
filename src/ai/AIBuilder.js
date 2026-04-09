@@ -18,66 +18,55 @@
 import vanillabuilder from '../index.js';
 import ParserHtml from '../parser/ParserHtml.js';
 
-// ── Section Templates ──
+// Section Templates (CSS custom properties)
 
 const SECTION_TEMPLATES = {
-  hero: (o = {}) => `<section style="padding:${o.padding||'80px 20px'};text-align:center;background:${o.background||'linear-gradient(135deg,#667eea 0%,#764ba2 100%)'};color:${o.color||'white'};">
-    <h1 style="font-size:${o.headingSize||'48px'};font-weight:800;margin-bottom:16px;">${o.headline||'Your Headline Here'}</h1>
-    <p style="font-size:${o.subSize||'20px'};opacity:0.9;max-width:600px;margin:0 auto ${o.buttonText?'32px':'0'};">${o.subheadline||'A brief description of your product or service.'}</p>
-    ${o.buttonText?`<a href="${o.buttonUrl||'#'}" style="display:inline-block;padding:14px 36px;background:${o.buttonBg||'white'};color:${o.buttonColor||'#764ba2'};border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;">${o.buttonText}</a>`:''}
-  </section>`,
+  hero: (o = {}) => `<section style="padding:var(--sp-section-y) var(--sp-section-x);text-align:center;background:${o.background||'linear-gradient(135deg,var(--c-primary) 0%,var(--c-primary-light) 100%)'};color:var(--c-text-light);">
+  <h1 style="font-family:var(--f-heading);font-size:var(--fs-h1);font-weight:800;margin-bottom:16px;">${o.headline||'Your Headline Here'}</h1>
+  <p style="font-size:${o.subSize||'20px'};opacity:0.9;max-width:600px;margin:0 auto ${o.buttonText?'32px':'0'};font-family:var(--f-body);">${o.subheadline||'A brief description of your product or service.'}</p>
+  ${o.buttonText?`<a href="${o.buttonUrl||'#'}" style="display:inline-block;padding:14px 36px;background:var(--c-bg);color:var(--c-primary);border-radius:var(--radius);text-decoration:none;font-weight:700;font-size:var(--fs-body);">${o.buttonText}</a>`:''}</section>`,
 
   features: (o = {}) => {
     const items = o.items || [
-      { icon: '&#9889;', title: 'Feature One', description: 'Description of this feature.' },
-      { icon: '&#128640;', title: 'Feature Two', description: 'Description of this feature.' },
-      { icon: '&#128161;', title: 'Feature Three', description: 'Description of this feature.' },
+      { icon: '&#9889;', title: 'Feature One', description: 'Description goes here.' },
+      { icon: '&#128640;', title: 'Feature Two', description: 'Description goes here.' },
+      { icon: '&#128161;', title: 'Feature Three', description: 'Description goes here.' },
     ];
-    const cols = items.map(i => `<div style="flex:1;min-width:250px;padding:24px;background:${o.cardBg||'#f8f9fa'};border-radius:8px;text-align:center;">
-      <div style="font-size:36px;margin-bottom:12px;">${i.icon||'&#10024;'}</div>
-      <h3 style="margin-bottom:8px;color:${o.titleColor||'#333'};">${i.title}</h3>
-      <p style="color:${o.textColor||'#666'};font-size:14px;line-height:1.6;">${i.description}</p>
-    </div>`).join('');
-    return `<section style="padding:${o.padding||'60px 20px'};max-width:${o.maxWidth||'960px'};margin:0 auto;">
-      ${o.heading?`<h2 style="text-align:center;font-size:32px;margin-bottom:40px;color:#333;">${o.heading}</h2>`:''}
-      <div style="display:flex;gap:24px;flex-wrap:wrap;">${cols}</div>
-    </section>`;
+    return `<section style="padding:var(--sp-section-y) var(--sp-section-x);max-width:var(--max-w);margin:0 auto;">
+    ${o.heading?`<h2 style="text-align:center;font-family:var(--f-heading);font-size:var(--fs-h2);margin-bottom:40px;color:var(--c-text);">${o.heading}</h2>`:''}
+    <div style="display:flex;gap:var(--sp-gap);flex-wrap:wrap;">${items.map(i => `<div style="flex:1;min-width:250px;padding:var(--sp-card);background:var(--c-surface);border-radius:var(--radius);text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">${i.icon||'&#10024;'}</div>
+    <h3 style="margin-bottom:8px;color:var(--c-text);font-family:var(--f-heading);font-size:var(--fs-h3);">${i.title}</h3>
+    <p style="color:var(--c-text-muted);font-size:var(--fs-sm);line-height:1.6;font-family:var(--f-body);">${i.description}</p></div>`).join('')}</div></section>`;
   },
 
-  cta: (o = {}) => `<section style="padding:${o.padding||'60px 20px'};background:${o.background||'#7c3aed'};text-align:center;color:white;">
-    <h2 style="font-size:36px;font-weight:700;margin-bottom:16px;">${o.headline||'Ready to get started?'}</h2>
-    <p style="font-size:18px;opacity:0.9;margin-bottom:28px;">${o.subheadline||'Join thousands of happy customers today.'}</p>
-    <a href="${o.buttonUrl||'#'}" style="display:inline-block;padding:14px 36px;background:white;color:${o.buttonColor||'#7c3aed'};border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;">${o.buttonText||'Sign Up Free'}</a>
-  </section>`,
+  cta: (o = {}) => `<section style="padding:var(--sp-section-y) var(--sp-section-x);background:${o.background||'var(--c-primary)'};text-align:center;color:var(--c-text-light);">
+  <h2 style="font-family:var(--f-heading);font-size:var(--fs-h2);font-weight:700;margin-bottom:16px;">${o.headline||'Ready to get started?'}</h2>
+  <p style="font-size:18px;opacity:0.9;margin-bottom:28px;font-family:var(--f-body);">${o.subheadline||'Join thousands of happy customers today.'}</p>
+  <a href="${o.buttonUrl||'#'}" style="display:inline-block;padding:14px 36px;background:var(--c-bg);color:var(--c-primary);border-radius:var(--radius);text-decoration:none;font-weight:700;font-size:var(--fs-body);">${o.buttonText||'Sign Up Free'}</a></section>`,
 
   testimonials: (o = {}) => {
-    const items = o.items || [{ quote: 'This product changed how we work.', author: 'Jane Doe', role: 'CEO, Company' }];
-    const cards = items.map(i => `<div style="flex:1;min-width:300px;padding:32px;background:#f8f9fa;border-radius:12px;">
-      <p style="font-size:16px;font-style:italic;color:#444;line-height:1.6;margin-bottom:16px;">"${i.quote}"</p>
-      <div><strong style="color:#333;">${i.author}</strong><br/><span style="font-size:13px;color:#888;">${i.role||''}</span></div>
-    </div>`).join('');
-    return `<section style="padding:${o.padding||'60px 20px'};max-width:960px;margin:0 auto;">
-      ${o.heading?`<h2 style="text-align:center;font-size:32px;margin-bottom:40px;color:#333;">${o.heading}</h2>`:''}
-      <div style="display:flex;gap:24px;flex-wrap:wrap;">${cards}</div>
-    </section>`;
+    const items = o.items || [{ quote: 'Amazing product.', author: 'Jane Doe', role: 'CEO' }];
+    return `<section style="padding:var(--sp-section-y) var(--sp-section-x);max-width:var(--max-w);margin:0 auto;">
+    ${o.heading?`<h2 style="text-align:center;font-family:var(--f-heading);font-size:var(--fs-h2);margin-bottom:40px;color:var(--c-text);">${o.heading}</h2>`:''}
+    <div style="display:flex;gap:var(--sp-gap);flex-wrap:wrap;">${items.map(i => `<div style="flex:1;min-width:300px;padding:32px;background:var(--c-surface);border-radius:calc(var(--radius) * 1.5);">
+    <p style="font-size:var(--fs-body);font-style:italic;color:var(--c-text);line-height:1.6;margin-bottom:16px;font-family:var(--f-body);">"${i.quote}"</p>
+    <div><strong style="color:var(--c-text);">${i.author}</strong><br/><span style="font-size:var(--fs-xs);color:var(--c-text-muted);">${i.role||''}</span></div></div>`).join('')}</div></section>`;
   },
 
   pricing: (o = {}) => {
     const plans = o.plans || [
-      { name: 'Starter', price: '$9', period: '/mo', features: ['5 Projects', 'Basic Support', '1 GB Storage'] },
-      { name: 'Pro', price: '$29', period: '/mo', features: ['Unlimited Projects', 'Priority Support', '50 GB Storage'], popular: true },
+      { name: 'Starter', price: '$9', period: '/mo', features: ['5 Projects', 'Basic Support'] },
+      { name: 'Pro', price: '$29', period: '/mo', features: ['Unlimited', 'Priority Support'], popular: true },
     ];
-    const cards = plans.map(p => `<div style="flex:1;min-width:260px;max-width:300px;padding:32px;background:white;border-radius:12px;text-align:center;border:${p.popular?'2px solid #7c3aed':'1px solid #e2e8f0'};position:relative;">
-      ${p.popular?'<div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#7c3aed;color:white;padding:4px 16px;border-radius:12px;font-size:12px;font-weight:600;">Popular</div>':''}
-      <h3 style="font-size:20px;color:#333;margin-bottom:8px;">${p.name}</h3>
-      <div style="font-size:42px;font-weight:800;color:#333;margin:16px 0;">${p.price}<span style="font-size:16px;color:#888;font-weight:400;">${p.period||'/mo'}</span></div>
-      <ul style="list-style:none;padding:0;margin:0 0 24px;text-align:left;">${p.features.map(f=>`<li style="padding:8px 0;border-bottom:1px solid #f1f3f5;color:#555;">&#10003; ${f}</li>`).join('')}</ul>
-      <a href="${p.buttonUrl||'#'}" style="display:block;padding:12px;background:#7c3aed;color:white;border-radius:6px;text-decoration:none;font-weight:600;">${p.buttonText||'Choose Plan'}</a>
-    </div>`).join('');
-    return `<section style="padding:${o.padding||'60px 20px'};background:${o.background||'#f8f9fa'};">
-      ${o.heading?`<h2 style="text-align:center;font-size:32px;margin-bottom:40px;color:#333;">${o.heading}</h2>`:''}
-      <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;max-width:960px;margin:0 auto;">${cards}</div>
-    </section>`;
+    return `<section style="padding:var(--sp-section-y) var(--sp-section-x);background:var(--c-surface);">
+    ${o.heading?`<h2 style="text-align:center;font-family:var(--f-heading);font-size:var(--fs-h2);margin-bottom:40px;color:var(--c-text);">${o.heading}</h2>`:''}
+    <div style="display:flex;gap:var(--sp-gap);justify-content:center;flex-wrap:wrap;max-width:var(--max-w);margin:0 auto;">${plans.map(p => `<div style="flex:1;min-width:260px;max-width:300px;padding:32px;background:var(--c-bg);border-radius:calc(var(--radius) * 1.5);text-align:center;border:${p.popular?'2px solid var(--c-primary)':'1px solid var(--c-border)'};position:relative;">
+    ${p.popular?'<div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--c-primary);color:var(--c-text-light);padding:4px 16px;border-radius:12px;font-size:var(--fs-xs);font-weight:600;">Popular</div>':''}
+    <h3 style="font-size:var(--fs-h3);color:var(--c-text);margin-bottom:8px;font-family:var(--f-heading);">${p.name}</h3>
+    <div style="font-size:42px;font-weight:800;color:var(--c-text);margin:16px 0;">${p.price}<span style="font-size:var(--fs-body);color:var(--c-text-muted);font-weight:400;">${p.period||'/mo'}</span></div>
+    <ul style="list-style:none;padding:0;margin:0 0 24px;text-align:left;">${p.features.map(f=>`<li style="padding:8px 0;border-bottom:1px solid var(--c-surface);color:var(--c-text);font-size:var(--fs-sm);">&#10003; ${f}</li>`).join('')}</ul>
+    <a href="${p.buttonUrl||'#'}" style="display:block;padding:12px;background:var(--c-primary);color:var(--c-text-light);border-radius:var(--radius);text-decoration:none;font-weight:600;font-size:var(--fs-sm);">${p.buttonText||'Choose Plan'}</a></div>`).join('')}</div></section>`;
   },
 
   footer: (o = {}) => {
@@ -86,66 +75,44 @@ const SECTION_TEMPLATES = {
       { title: 'Links', links: o.links || [{ text: 'Home', url: '#' }, { text: 'About', url: '#' }, { text: 'Contact', url: '#' }] },
       { title: 'Legal', links: [{ text: 'Privacy', url: '#' }, { text: 'Terms', url: '#' }] },
     ];
-    const colsHtml = cols.map(c => `<div style="flex:1;min-width:150px;">
-      <h4 style="font-size:16px;margin-bottom:12px;color:white;">${c.title}</h4>
-      ${c.text?`<p style="font-size:14px;color:#9ca3af;line-height:1.8;">${c.text}</p>`:''}
-      ${c.links?`<div style="display:flex;flex-direction:column;gap:8px;">${c.links.map(l=>`<a href="${l.url||'#'}" style="color:#9ca3af;text-decoration:none;font-size:14px;">${l.text}</a>`).join('')}</div>`:''}
-    </div>`).join('');
-    return `<footer style="padding:40px 20px;background:${o.background||'#1a1a2e'};color:#cdd6f4;">
-      <div style="display:flex;gap:40px;flex-wrap:wrap;max-width:960px;margin:0 auto 32px;">${colsHtml}</div>
-      <div style="border-top:1px solid #2a2a4a;padding-top:20px;text-align:center;font-size:13px;color:#6c7086;">${o.copyright||'&copy; 2026 Company. All rights reserved.'}</div>
-    </footer>`;
+    return `<footer style="padding:40px var(--sp-section-x);background:var(--c-surface-dark);color:var(--c-text-muted);font-family:var(--f-body);">
+    <div style="display:flex;gap:40px;flex-wrap:wrap;max-width:var(--max-w);margin:0 auto 32px;">${cols.map(c => `<div style="flex:1;min-width:150px;">
+    <h4 style="font-size:var(--fs-body);margin-bottom:12px;color:var(--c-text-light);font-family:var(--f-heading);">${c.title}</h4>
+    ${c.text?`<p style="font-size:var(--fs-sm);color:var(--c-text-muted);line-height:1.8;">${c.text}</p>`:''}
+    ${c.links?`<div style="display:flex;flex-direction:column;gap:8px;">${c.links.map(l=>`<a href="${l.url||'#'}" style="color:var(--c-text-muted);text-decoration:none;font-size:var(--fs-sm);">${l.text}</a>`).join('')}</div>`:''}</div>`).join('')}</div>
+    <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;text-align:center;font-size:var(--fs-xs);color:var(--c-text-muted);">${o.copyright||'&copy; 2026 Company. All rights reserved.'}</div></footer>`;
   },
 
-  contact: (o = {}) => `<section style="padding:${o.padding||'60px 20px'};max-width:${o.maxWidth||'500px'};margin:0 auto;">
-    ${o.heading?`<h2 style="text-align:center;font-size:32px;margin-bottom:32px;color:#333;">${o.heading}</h2>`:''}
-    <form style="display:flex;flex-direction:column;gap:16px;">
-      <input type="text" placeholder="${o.namePlaceholder||'Your name'}" style="padding:12px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;"/>
-      <input type="email" placeholder="${o.emailPlaceholder||'you@example.com'}" style="padding:12px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;"/>
-      <textarea rows="${o.rows||4}" placeholder="${o.messagePlaceholder||'Your message'}" style="padding:12px;border:1px solid #dee2e6;border-radius:6px;font-size:14px;resize:vertical;"></textarea>
-      <button type="submit" style="padding:12px 24px;background:${o.buttonBg||'#7c3aed'};color:white;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer;">${o.buttonText||'Send Message'}</button>
-    </form>
-  </section>`,
+  contact: (o = {}) => `<section style="padding:var(--sp-section-y) var(--sp-section-x);max-width:${o.maxWidth||'500px'};margin:0 auto;">
+  ${o.heading?`<h2 style="text-align:center;font-family:var(--f-heading);font-size:var(--fs-h2);margin-bottom:32px;color:var(--c-text);">${o.heading}</h2>`:''}
+  <form style="display:flex;flex-direction:column;gap:16px;font-family:var(--f-body);">
+    <input type="text" placeholder="${o.namePlaceholder||'Your name'}" style="padding:12px;border:1px solid var(--c-border);border-radius:var(--radius);font-size:var(--fs-sm);"/>
+    <input type="email" placeholder="${o.emailPlaceholder||'you@example.com'}" style="padding:12px;border:1px solid var(--c-border);border-radius:var(--radius);font-size:var(--fs-sm);"/>
+    <textarea rows="${o.rows||4}" placeholder="${o.messagePlaceholder||'Your message'}" style="padding:12px;border:1px solid var(--c-border);border-radius:var(--radius);font-size:var(--fs-sm);resize:vertical;"></textarea>
+    <button type="submit" style="padding:12px 24px;background:var(--c-primary);color:var(--c-text-light);border:none;border-radius:var(--radius);font-size:var(--fs-body);font-weight:600;cursor:pointer;">${o.buttonText||'Send Message'}</button></form></section>`,
 
   faq: (o = {}) => {
-    const items = o.items || [
-      { question: 'What is this product?', answer: 'A brief answer to the question.' },
-      { question: 'How does pricing work?', answer: 'A brief answer about pricing.' },
-    ];
-    const faqHtml = items.map(i => `<div style="border-bottom:1px solid #e2e8f0;padding:16px 0;">
-      <h4 style="font-size:16px;color:#333;margin-bottom:8px;">${i.question}</h4>
-      <p style="font-size:14px;color:#666;line-height:1.6;">${i.answer}</p>
-    </div>`).join('');
-    return `<section style="padding:${o.padding||'60px 20px'};max-width:700px;margin:0 auto;">
-      ${o.heading?`<h2 style="text-align:center;font-size:32px;margin-bottom:40px;color:#333;">${o.heading}</h2>`:''}
-      ${faqHtml}
-    </section>`;
+    const items = o.items || [{ question: 'Question?', answer: 'Answer.' }];
+    return `<section style="padding:var(--sp-section-y) var(--sp-section-x);max-width:700px;margin:0 auto;font-family:var(--f-body);">
+    ${o.heading?`<h2 style="text-align:center;font-family:var(--f-heading);font-size:var(--fs-h2);margin-bottom:40px;color:var(--c-text);">${o.heading}</h2>`:''}${items.map(i => `<div style="border-bottom:1px solid var(--c-border);padding:16px 0;">
+    <h4 style="font-size:var(--fs-body);color:var(--c-text);margin-bottom:8px;font-family:var(--f-heading);">${i.question}</h4>
+    <p style="font-size:var(--fs-sm);color:var(--c-text-muted);line-height:1.6;">${i.answer}</p></div>`).join('')}</section>`;
   },
 
   navbar: (o = {}) => {
     const links = o.links || [{ text: 'Home', url: '#' }, { text: 'About', url: '#' }, { text: 'Contact', url: '#' }];
-    const linksHtml = links.map(l => `<a href="${l.url||'#'}" style="color:${o.linkColor||'#333'};text-decoration:none;font-size:14px;font-weight:500;">${l.text}</a>`).join('');
-    return `<nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:${o.background||'white'};border-bottom:1px solid #e2e8f0;">
-      <div style="font-size:20px;font-weight:700;color:${o.brandColor||'#7c3aed'};">${o.brand||'Brand'}</div>
-      <div style="display:flex;gap:24px;">${linksHtml}</div>
-      ${o.ctaText?`<a href="${o.ctaUrl||'#'}" style="padding:8px 20px;background:#7c3aed;color:white;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">${o.ctaText}</a>`:''}
-    </nav>`;
+    return `<nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--c-bg);border-bottom:1px solid var(--c-border);font-family:var(--f-body);">
+    <div style="font-size:var(--fs-h3);font-weight:700;color:var(--c-primary);font-family:var(--f-heading);">${o.brand||'Brand'}</div>
+    <div style="display:flex;gap:24px;">${links.map(l => `<a href="${l.url||'#'}" style="color:var(--c-text);text-decoration:none;font-size:var(--fs-sm);font-weight:500;">${l.text}</a>`).join('')}</div>
+    ${o.ctaText?`<a href="${o.ctaUrl||'#'}" style="padding:8px 20px;background:var(--c-primary);color:var(--c-text-light);border-radius:var(--radius);text-decoration:none;font-size:var(--fs-sm);font-weight:600;">${o.ctaText}</a>`:''}</nav>`;
   },
 
   stats: (o = {}) => {
-    const items = o.items || [
-      { value: '10K+', label: 'Users' },
-      { value: '99.9%', label: 'Uptime' },
-      { value: '24/7', label: 'Support' },
-      { value: '50+', label: 'Countries' },
-    ];
-    const statsHtml = items.map(i => `<div style="flex:1;min-width:120px;text-align:center;">
-      <div style="font-size:36px;font-weight:800;color:${o.valueColor||'#7c3aed'};margin-bottom:4px;">${i.value}</div>
-      <div style="font-size:14px;color:${o.labelColor||'#666'};">${i.label}</div>
-    </div>`).join('');
-    return `<section style="padding:${o.padding||'60px 20px'};background:${o.background||'#f8f9fa'};">
-      <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center;max-width:800px;margin:0 auto;">${statsHtml}</div>
-    </section>`;
+    const items = o.items || [{ value: '10K+', label: 'Users' }, { value: '99.9%', label: 'Uptime' }, { value: '24/7', label: 'Support' }];
+    return `<section style="padding:var(--sp-section-y) var(--sp-section-x);background:var(--c-surface);font-family:var(--f-body);">
+    <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center;max-width:800px;margin:0 auto;">${items.map(i => `<div style="flex:1;min-width:120px;text-align:center;">
+    <div style="font-size:36px;font-weight:800;color:var(--c-primary);margin-bottom:4px;font-family:var(--f-heading);">${i.value}</div>
+    <div style="font-size:var(--fs-sm);color:var(--c-text-muted);">${i.label}</div></div>`).join('')}</div></section>`;
   },
 };
 

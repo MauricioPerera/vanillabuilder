@@ -247,6 +247,64 @@ const commands = {
     else err(res.error);
   },
 
+  async datasource(action, jsonOrId) {
+    if (!action || action === 'list') {
+      const res = await apiExecute('getDataSources');
+      if (res.ok) {
+        if (res.data.length === 0) { dim('No data sources'); return; }
+        for (const ds of res.data) log('  ' + bold(ds.id.padEnd(15)) + ds.url);
+      } else err(res.error);
+      return;
+    }
+    if (action === 'add') {
+      if (!jsonOrId) { err('Usage: vb datasource add \'{"id":"x","url":"...","targetSelector":"#x","template":"<p>{{field}}</p>"}\''); return; }
+      let config;
+      try { config = jsonOrId.startsWith('{') ? JSON.parse(jsonOrId) : JSON.parse(fs.readFileSync(jsonOrId, 'utf8')); }
+      catch { err('Invalid JSON'); return; }
+      const res = await apiExecute('addDataSource', config);
+      if (res.ok) ok('Data source added: ' + (config.id || ''));
+      else err(res.error);
+      return;
+    }
+    if (action === 'remove') {
+      if (!jsonOrId) { err('Usage: vb datasource remove <id>'); return; }
+      const res = await apiExecute('removeDataSource', { id: jsonOrId });
+      if (res.ok) ok('Removed: ' + jsonOrId);
+      else err(res.error);
+      return;
+    }
+    err('Usage: vb datasource [list|add|remove]');
+  },
+
+  async formaction(action, jsonOrId) {
+    if (!action || action === 'list') {
+      const res = await apiExecute('getFormActions');
+      if (res.ok) {
+        if (res.data.length === 0) { dim('No form actions'); return; }
+        for (const fa of res.data) log('  ' + bold(fa.id.padEnd(15)) + fa.formSelector + ' -> ' + fa.webhookUrl);
+      } else err(res.error);
+      return;
+    }
+    if (action === 'add') {
+      if (!jsonOrId) { err('Usage: vb formaction add \'{"id":"x","formSelector":"form","webhookUrl":"https://..."}\''); return; }
+      let config;
+      try { config = jsonOrId.startsWith('{') ? JSON.parse(jsonOrId) : JSON.parse(fs.readFileSync(jsonOrId, 'utf8')); }
+      catch { err('Invalid JSON'); return; }
+      const res = await apiExecute('addFormAction', config);
+      if (res.ok) ok('Form action added: ' + (config.id || ''));
+      else err(res.error);
+      return;
+    }
+    if (action === 'remove') {
+      if (!jsonOrId) { err('Usage: vb formaction remove <id>'); return; }
+      const res = await apiExecute('removeFormAction', { id: jsonOrId });
+      if (res.ok) ok('Removed: ' + jsonOrId);
+      else err(res.error);
+      return;
+    }
+    err('Usage: vb formaction [list|add|remove]');
+  },
+
   async landing(configFile) {
     let config = {};
     if (configFile) {
@@ -289,6 +347,8 @@ const commands = {
     log('  vb preview                     Print full page HTML');
     log('  vb export [file.html]          Save page to file');
     log('  vb theme [config.json|json]     Set or view design theme');
+    log('  vb datasource [list|add|remove] Manage API data sources');
+    log('  vb formaction [list|add|remove] Manage form webhooks');
     log('  vb landing [config.json]       Build landing page from config');
     log('  vb reset                       Delete session & create new one');
     log('  vb help                        Show this help');
