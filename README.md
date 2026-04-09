@@ -1,110 +1,145 @@
 # VanillaBuilder
 
-A **zero-dependency** visual web page builder with an **AI-friendly API**. Built entirely with **vanilla ES6+ JavaScript**. Deploy on Cloudflare Pages — any agent or human can build pages via HTTP requests or the visual editor.
+A **zero-dependency** visual web page builder with an **AI-friendly HTTP API**. Built entirely with **vanilla ES6+ JavaScript**. Deployed on Cloudflare Pages — any agent or human can build pages via HTTP requests, CLI, or the visual editor. Changes sync in real-time.
 
-**Live demo**: [vanillabuilder.pages.dev](https://vanillabuilder.pages.dev)
+**Live**: [vanillabuilder.pages.dev](https://vanillabuilder.pages.dev)
 
-![Tests](https://img.shields.io/badge/tests-863+-brightgreen)
+![Tests](https://img.shields.io/badge/tests-913-brightgreen)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-blue)
-![API Methods](https://img.shields.io/badge/API_methods-19-purple)
+![API Methods](https://img.shields.io/badge/API_methods-20-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## What is VanillaBuilder?
+---
 
-A visual page builder that works two ways:
+## How It Works
 
-1. **Visual Editor** — Humans drag blocks, edit text, pick colors in a browser UI
-2. **HTTP API** — AI agents build pages with `curl` / `fetch` requests
+```
+┌─────────────────┐     HTTP      ┌──────────────────────────────┐
+│  AI Agent / CLI  │ ──────────── │  vanillabuilder.pages.dev    │
+│  (curl / vb)     │   POST/GET   │                              │
+└─────────────────┘              │  ┌─────────┐  ┌───────────┐  │
+                                  │  │  API     │  │  Editor   │  │
+┌─────────────────┐              │  │ Functions│◄─┤  Visual   │  │
+│  Human (browser) │ ◄──────────  │  │ (KV+DB) │  │  (HTML)   │  │
+│  drag/drop/edit  │   polling    │  └─────────┘  └───────────┘  │
+└─────────────────┘              └──────────────────────────────┘
+```
 
-Both work on the same page simultaneously. Changes sync in real-time via Cloudflare KV.
+1. **Agent** sends HTTP requests to the API (add sections, set theme, connect data)
+2. **API** stores state in Cloudflare KV via js-doc-store
+3. **Editor** polls API and renders changes in the visual canvas
+4. **Human** drags blocks, edits text, picks colors — changes sync back to API
+5. **Export** generates deploy-ready files (HTML + CSS + JS)
+
+Both agent and human work on the **same page simultaneously**.
+
+---
 
 ## Quick Start
 
-### For Agents (API)
+### Option 1: CLI (zero dependencies)
 
 ```bash
 # Create a session
+node cli.cjs new
+#  Session created: cli_abc123
+#  Editor URL: https://vanillabuilder.pages.dev/?sessionId=cli_abc123
+
+# Set a theme
+node cli.cjs theme '{"colors":{"primary":"#059669"},"fonts":{"heading":"Georgia, serif"}}'
+
+# Build the page
+node cli.cjs add navbar '{"brand":"MyApp","ctaText":"Sign Up"}'
+node cli.cjs add hero '{"headline":"Welcome","subheadline":"Build pages with AI","buttonText":"Start"}'
+node cli.cjs add features '{"heading":"Why Us","items":[{"icon":"⚡","title":"Fast","description":"Zero deps"},{"icon":"🔒","title":"Secure","description":"E2E encrypted"}]}'
+node cli.cjs add pricing '{"heading":"Plans","plans":[{"name":"Free","price":"$0","features":["1 Project"]},{"name":"Pro","price":"$29","features":["Unlimited"],"popular":true}]}'
+node cli.cjs add footer '{"copyright":"2026 MyApp"}'
+
+# Connect an external API
+node cli.cjs datasource add '{"id":"posts","url":"https://api.example.com/posts","path":"data.items","targetSelector":"#posts","template":"<div><h3>{{title}}</h3><p>{{author.name}}</p></div>"}'
+
+# Connect a form webhook
+node cli.cjs formaction add '{"id":"contact","formSelector":"form","webhookUrl":"https://hooks.zapier.com/xxx"}'
+
+# Open in browser to see it
+node cli.cjs open
+
+# Check stats
+node cli.cjs info
+
+# Export for deployment
+node cli.cjs export dist/
+#  dist/index.html (clean HTML)
+#  dist/styles.css (theme + custom CSS)
+#  dist/script.js  (data fetchers + form handlers)
+
+# Deploy anywhere
+cd dist && npx wrangler pages deploy .    # Cloudflare
+cd dist && vercel                          # Vercel
+cd dist && netlify deploy                  # Netlify
+```
+
+### Option 2: HTTP API (curl / fetch)
+
+```bash
+# Create session
 curl -X POST https://vanillabuilder.pages.dev/api/session \
   -H "Content-Type: application/json" \
   -d '{"sessionId":"my-page"}'
 
-# Build a page
+# Build page in one request
 curl -X POST https://vanillabuilder.pages.dev/api/batch \
   -H "Content-Type: application/json" \
   -d '{
     "sessionId": "my-page",
     "actions": [
-      {"method":"setTheme","params":{"colors":{"primary":"#059669"}}},
-      {"method":"addSection","params":{"type":"hero","options":{"headline":"Hello World","buttonText":"Click Me"}}},
-      {"method":"addSection","params":{"type":"features","options":{"heading":"Why Us","items":[{"icon":"⚡","title":"Fast","description":"Zero deps"}]}}},
-      {"method":"addSection","params":{"type":"footer"}},
-      {"method":"getFullPage","params":{"title":"My Page"}}
+      {"method":"setTheme","params":{"colors":{"primary":"#7c3aed"}}},
+      {"method":"addSection","params":{"type":"hero","options":{"headline":"Hello World"}}},
+      {"method":"addSection","params":{"type":"features","options":{"heading":"Features","items":[{"title":"A","description":"B"}]}}},
+      {"method":"addSection","params":{"type":"footer"}}
     ]
   }'
 
-# Open in browser to see the result
+# Open editor to see it
 open "https://vanillabuilder.pages.dev/?sessionId=my-page"
+
+# Export deploy-ready files
+curl -X POST https://vanillabuilder.pages.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"my-page","method":"exportProject","params":{"title":"My Site"}}'
+# Returns: { files: { "index.html": "...", "styles.css": "...", "script.js": "..." } }
 ```
 
-### For Humans (Editor)
+### Option 3: Visual Editor
 
-Open [vanillabuilder.pages.dev](https://vanillabuilder.pages.dev) and:
+1. Open [vanillabuilder.pages.dev](https://vanillabuilder.pages.dev)
+2. **Drag blocks** from the left panel to the canvas
+3. **Double-click text** to edit inline
+4. **Double-click icons** to pick a new one
+5. **Double-click images** to change URL
+6. **Click elements** to edit styles (right panel → Styles)
+7. **Theme tab** → set colors, fonts, spacing globally
+8. **Data tab** → connect APIs and form webhooks
+9. **Session button** → get share link for collaboration
+10. **Export button** → download HTML + CSS + JS files
 
-- **Drag blocks** from the left panel to the canvas
-- **Double-click text** to edit inline
-- **Double-click icons** to open the icon picker
-- **Double-click images** to change the URL
-- **Click elements** to edit styles in the right panel
-- **Theme tab** to set global colors, fonts, spacing
-- **Data tab** to connect APIs and form webhooks
-- **Session button** to get the share link
+---
 
-### CLI
+## Collaborative Editing
 
-```bash
-# Zero dependencies — uses Node.js built-ins only
-node cli.cjs new                                    # Create session
-node cli.cjs add hero '{"headline":"Hello"}'        # Add section
-node cli.cjs theme '{"colors":{"primary":"#dc2626"}}' # Set theme
-node cli.cjs info                                   # Show stats
-node cli.cjs open                                   # Open editor in browser
-node cli.cjs export page.html                       # Save to file
+Any number of agents and humans can edit the same page:
+
+```
+1. Human opens editor → gets sessionId (auto-generated)
+2. Human clicks "Session" → copies share link
+3. Human shares link with agent
+4. Agent uses sessionId in API calls
+5. Both see changes in real-time (editor polls every 2s)
+6. Changelog tracks who changed what (source: "agent" or "editor")
+7. Reset Session = new sessionId = revokes old access
 ```
 
-## Features
-
-### Visual Editor
-- **30 blocks** across 5 categories (Basic, Media, Layout, Forms, Sections)
-- **Drag & drop** with position indicator
-- **Inline editing** — double-click text, icons, images
-- **Style panel** — Dimension, Typography, Decorations, Layout, Flexbox
-- **Theme panel** — Global colors, fonts, sizes, spacing, border radius
-- **Data panel** — Connect external APIs and form webhooks
-- **Responsive preview** — Desktop, Tablet, Mobile
-- **Collapsible sidebars** — Maximize canvas space
-- **Session management** — Share link, reset session
-
-### AI API
-- **19 methods** available via HTTP
-- **Stateful sessions** — persisted in Cloudflare KV, isolated per user
-- **Bidirectional sync** — agent and human edit the same page in real-time
-- **Changelog** — tracks who made each change (agent or editor)
-- **Tool schemas** — ready for AI function calling (Anthropic, OpenAI, generic)
-
-### Design System / Theme
-- Define once, apply everywhere
-- Colors (12 tokens), fonts, sizes, spacing, border radius, max width
-- All sections use CSS custom properties
-- Change theme → entire page updates instantly
-
-### Data Sources & Form Actions
-- **Connect any REST API** — fetch data client-side, no backend
-- **Dot notation** for nested data: `response.data.items`, `{{user.address.city}}`
-- **Pagination** — configurable per-page, page param, limit param
-- **Auto-refresh** — poll APIs on interval
-- **Form webhooks** — POST to Zapier, Make, n8n, or any URL on submit
-- **Success/error messages** — configurable per form
-- **Redirect on success** — optional
+---
 
 ## API Reference
 
@@ -113,190 +148,265 @@ node cli.cjs export page.html                       # Save to file
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/health` | Service status |
-| `GET` | `/api/schemas` | Tool definitions (`?format=anthropic\|openai\|generic`) |
+| `GET` | `/api/schemas?format=anthropic\|openai\|generic` | Tool definitions for AI function calling |
 | `POST` | `/api/session` | Create session `{"sessionId":"xxx"}` |
-| `GET` | `/api/session` | Check session exists `?sessionId=xxx` |
-| `DELETE` | `/api/session` | Delete session `?sessionId=xxx` |
-| `POST` | `/api/execute` | Execute single method |
-| `POST` | `/api/batch` | Execute multiple methods |
-| `GET` | `/api/poll` | Get current page state `?sessionId=xxx` |
-| `POST` | `/api/sync` | Editor pushes changes to API |
-| `GET` | `/api/changelog` | View change history `?sessionId=xxx` |
+| `GET` | `/api/session?sessionId=xxx` | Check if session exists |
+| `DELETE` | `/api/session?sessionId=xxx` | Delete session (revokes access) |
+| `POST` | `/api/execute` | Execute one method `{"sessionId","method","params"}` |
+| `POST` | `/api/batch` | Execute multiple methods `{"sessionId","actions":[...]}` |
+| `GET` | `/api/poll?sessionId=xxx&v=ver` | Poll for changes (versioned, cheap) |
+| `POST` | `/api/sync` | Editor pushes changes `{"sessionId","html"}` |
+| `GET` | `/api/changelog?sessionId=xxx` | View change history |
 
-### API Methods (19)
+### Methods (20)
 
-**Theme:**
-- `setTheme` — Set colors, fonts, sizes, spacing, borderRadius, maxWidth
-- `getTheme` — Get current theme
+#### Theme
+| Method | Description |
+|--------|-------------|
+| `setTheme` | Set design system: colors (12 tokens), fonts, sizes, spacing, borderRadius, maxWidth |
+| `getTheme` | Get current theme |
 
-**Content:**
-- `clearPage` — Remove all content
-- `addSection` — Add pre-built section (hero, features, cta, testimonials, pricing, footer, contact, faq, navbar, stats)
-- `addHTML` — Add raw HTML
-- `removeSection` — Remove section by index
+#### Content
+| Method | Description |
+|--------|-------------|
+| `clearPage` | Remove all content, data sources, and form actions |
+| `addSection` | Add pre-built section (10 types below) |
+| `addHTML` | Add raw HTML string |
+| `addCSSRule` | Add CSS rule with selector and styles |
+| `removeSection` | Remove section by index |
 
-**CSS:**
-- `addCSSRule` — Add CSS rule with selector and styles
-- `removeSection` — Remove by index
+#### Section Types
+| Type | Description |
+|------|-------------|
+| `hero` | Hero banner: headline, subheadline, button, background gradient |
+| `features` | Feature cards: icon, title, description per card |
+| `cta` | Call to action: headline, button |
+| `testimonials` | Quote cards: quote, author, role |
+| `pricing` | Pricing plans: name, price, features, popular badge |
+| `footer` | Footer: columns with links, copyright |
+| `contact` | Contact form: name, email, message fields |
+| `faq` | FAQ: question/answer pairs |
+| `navbar` | Navigation: brand, links, CTA button |
+| `stats` | Stats counters: value + label |
 
-**Data:**
-- `addDataSource` — Connect external API with template and dot notation path
-- `removeDataSource` — Remove data source
-- `getDataSources` — List data sources
-- `addFormAction` — Add webhook to form submit
-- `removeFormAction` — Remove form action
-- `getFormActions` — List form actions
+#### Data
+| Method | Description |
+|--------|-------------|
+| `addDataSource` | Connect external API. Fetches client-side. Dot notation for nested data (`response.data.items`, `{{user.address.city}}`). Pagination support. |
+| `removeDataSource` | Remove data source by ID |
+| `getDataSources` | List configured data sources |
+| `addFormAction` | Add webhook to form submit (Zapier, Make, n8n, any URL) |
+| `removeFormAction` | Remove form action by ID |
+| `getFormActions` | List configured form actions |
 
-**Export:**
-- `getHTML` — Get page body HTML
-- `getCSS` — Get CSS rules
-- `getFullPage` — Get complete HTML document with theme, scripts, and styles
+#### Export
+| Method | Description |
+|--------|-------------|
+| `getHTML` | Get page body HTML |
+| `getCSS` | Get CSS rules |
+| `getFullPage` | Get complete HTML document (single file, inline) |
+| `exportProject` | Get separate files: `index.html` + `styles.css` + `script.js` (deploy-ready) |
 
-**Query:**
-- `getPageInfo` — Section count, CSS rules, theme status, data sources, form actions
-- `getAvailableSections` — List 10 section types with descriptions
+#### Query
+| Method | Description |
+|--------|-------------|
+| `getPageInfo` | Counts: sections, CSS rules, data sources, form actions, hasTheme |
+| `getAvailableSections` | List 10 section types with descriptions |
 
-**Generator:**
-- `buildLandingPage` — Generate complete landing page from config object
+#### Generator
+| Method | Description |
+|--------|-------------|
+| `buildLandingPage` | Generate complete landing page from config object (all sections at once) |
 
-### Tool Definitions for AI
+---
 
-```bash
-# Anthropic format
-curl https://vanillabuilder.pages.dev/api/schemas?format=anthropic
+## CLI Reference
 
-# OpenAI format
-curl https://vanillabuilder.pages.dev/api/schemas?format=openai
+```
+vb new                              Create new session
+vb use <sessionId>                  Use existing session
+vb info                             Show session stats + editor URL
+vb open                             Open editor in browser
+vb sections                         List available section types
+vb add <type> [json]                Add section (hero, features, pricing...)
+vb html "<html>"                    Add raw HTML
+vb css ".selector" '{"k":"v"}'      Add CSS rule
+vb remove <index>                   Remove section by index
+vb clear                            Clear all content
+vb theme [json|file]                Set or view design theme
+vb datasource list                  List data sources
+vb datasource add '{...}'           Add API data source
+vb datasource remove <id>           Remove data source
+vb formaction list                  List form webhooks
+vb formaction add '{...}'           Add form webhook
+vb formaction remove <id>           Remove form webhook
+vb export [dir]                     Export project files (html+css+js)
+vb landing [config.json]            Build landing page from config
+vb preview                          Print full page HTML
+vb reset                            Delete session + create new one
+vb help                             Show help
 ```
 
-### Example: Agent Builds a SaaS Landing Page
+Interactive mode: `node cli.cjs` → `vb>` prompt.
+
+---
+
+## Design Theme System
+
+Define once, apply everywhere. All sections use CSS custom properties.
 
 ```bash
-curl -X POST https://vanillabuilder.pages.dev/api/batch \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionId": "my-saas",
-    "actions": [
-      {"method":"setTheme","params":{"colors":{"primary":"#4f46e5"},"fonts":{"heading":"Georgia, serif"}}},
-      {"method":"clearPage"},
-      {"method":"addSection","params":{"type":"navbar","options":{"brand":"CloudSync","ctaText":"Try Free"}}},
-      {"method":"addSection","params":{"type":"hero","options":{"headline":"Sync Everything","subheadline":"Keep your team in sync.","buttonText":"Start Free"}}},
-      {"method":"addSection","params":{"type":"features","options":{"heading":"Why Us","items":[{"icon":"⚡","title":"Fast","description":"Real-time sync"},{"icon":"🔒","title":"Secure","description":"E2E encrypted"}]}}},
-      {"method":"addSection","params":{"type":"pricing","options":{"heading":"Plans","plans":[{"name":"Free","price":"$0","features":["1 Project"]},{"name":"Pro","price":"$19","features":["Unlimited","Support"],"popular":true}]}}},
-      {"method":"addSection","params":{"type":"footer","options":{"copyright":"2026 CloudSync"}}},
-      {"method":"getFullPage","params":{"title":"CloudSync"}}
-    ]
-  }'
+vb theme '{
+  "colors": {
+    "primary": "#7c3aed",
+    "primaryLight": "#a78bfa",
+    "secondary": "#059669",
+    "background": "#ffffff",
+    "surface": "#f8f9fa",
+    "text": "#333333",
+    "textMuted": "#666666"
+  },
+  "fonts": {
+    "heading": "Georgia, serif",
+    "body": "Inter, sans-serif"
+  },
+  "sizes": {
+    "headingLg": "48px",
+    "body": "16px"
+  },
+  "spacing": {
+    "sectionY": "60px",
+    "gap": "24px"
+  },
+  "borderRadius": "12px",
+  "maxWidth": "1100px"
+}'
 ```
 
-### Example: Connect an API and Form Webhook
+Change the theme → every section updates instantly (CSS variables).
+
+---
+
+## Data Sources
+
+Connect any REST API. Data is fetched client-side in the exported page (no backend needed).
 
 ```bash
-curl -X POST https://vanillabuilder.pages.dev/api/batch \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionId": "my-page",
-    "actions": [
-      {"method":"addHTML","params":{"html":"<div id=\"posts\"></div>"}},
-      {"method":"addDataSource","params":{
-        "id":"blog",
-        "url":"https://my-cms.com/api/posts",
-        "path":"data.posts",
-        "targetSelector":"#posts",
-        "template":"<article><h3>{{title}}</h3><p>{{excerpt}}</p><small>{{author.name}}</small></article>",
-        "pagination":{"perPage":10}
-      }},
-      {"method":"addSection","params":{"type":"contact","options":{"heading":"Contact"}}},
-      {"method":"addFormAction","params":{
-        "id":"contact",
-        "formSelector":"form",
-        "webhookUrl":"https://hooks.zapier.com/xxx",
-        "successMessage":"Thanks!"
-      }}
-    ]
-  }'
+vb datasource add '{
+  "id": "blog-posts",
+  "url": "https://my-cms.com/api/posts",
+  "path": "data.posts",
+  "targetSelector": "#blog-list",
+  "template": "<article><h3>{{title}}</h3><p>{{excerpt}}</p><small>by {{author.name}} in {{category.label}}</small></article>",
+  "pagination": {"perPage": 10},
+  "headers": {"Authorization": "Bearer xxx"}
+}'
 ```
 
-## Collaborative Editing
+- **Dot notation** for nested data: `data.results.items`, `records[0].name`
+- **Templates**: `{{field}}`, `{{nested.field}}`, `{{array[0].prop}}`
+- **Pagination**: auto-generates Previous/Next buttons
+- **Auto-refresh**: set `interval` in seconds
 
-Multiple users/agents can edit the same page:
-
-1. User opens editor, gets a `sessionId`
-2. User shares the session link with an agent
-3. Agent makes API calls with that `sessionId`
-4. Editor auto-updates via polling (every 2 seconds)
-5. Human edits sync back to API via MutationObserver
-6. Changelog tracks who changed what
-
-Reset session = new `sessionId` = old collaborators lose access.
-
-## Deploy Your Own
+## Form Webhooks
 
 ```bash
-# Clone
+vb formaction add '{
+  "id": "contact-form",
+  "formSelector": "form",
+  "webhookUrl": "https://hooks.zapier.com/catch/xxx",
+  "successMessage": "Thanks! We will get back to you soon.",
+  "errorMessage": "Something went wrong. Please try again."
+}'
+```
+
+Works with Zapier, Make, n8n, or any endpoint that accepts POST with JSON body.
+
+---
+
+## Export & Deploy
+
+```bash
+# Export separate files
+vb export dist/
+# Creates:
+#   dist/index.html  — clean HTML, links to css/js
+#   dist/styles.css  — theme variables + all CSS rules
+#   dist/script.js   — data fetchers + form handlers (only if needed)
+
+# Deploy to any static host:
+cd dist
+npx wrangler pages deploy .          # Cloudflare Pages
+vercel                                # Vercel
+netlify deploy --dir=.                # Netlify
+# Or just push to GitHub with Pages enabled
+```
+
+The exported files are **fully static** — no server, no framework, no build step. Just HTML + CSS + JS.
+
+---
+
+## Deploy Your Own Instance
+
+```bash
 git clone https://github.com/MauricioPerera/vanillabuilder.git
 cd vanillabuilder
 
-# Create Cloudflare KV namespace
+# Create KV namespace
 npx wrangler kv namespace create VANILLABUILDER_SESSIONS
 # Update wrangler.toml with the namespace ID
 
 # Deploy
-npx wrangler pages deploy public --project-name my-builder
+npx wrangler pages deploy public --project-name my-vanillabuilder
 ```
 
-## Development
+**Cost**: Free tier covers everything (100K KV reads/day, 1K writes/day). Adaptive polling + versioning minimizes KV usage (~90% reduction vs naive polling).
 
-```bash
-npm install           # Install dev dependencies
-npm test              # Run 863+ tests
-npm run test:watch    # Watch mode
-
-# Local dev
-npx http-server . -p 8080 --cors -c-1
-open http://localhost:8080/examples/basic.html
-```
+---
 
 ## Architecture
 
 ```
 public/
-  index.html            # Visual editor (single file, self-contained)
+  index.html              Visual editor (self-contained single file)
 
-functions/api/          # Cloudflare Pages Functions (serverless API)
-  _builder.js           # PageBuilder: templates, theme, data sources, form actions
-  _db.js                # Session & changelog storage (Cloudflare KV)
-  execute.js            # POST /api/execute
-  batch.js              # POST /api/batch
-  poll.js               # GET /api/poll
-  sync.js               # POST /api/sync (editor → API)
-  session.js            # Session CRUD
-  changelog.js          # GET /api/changelog
-  health.js             # GET /api/health
-  schemas.js            # GET /api/schemas (AI tool definitions)
+functions/api/            Cloudflare Pages Functions
+  _builder.js             PageBuilder: sections, theme, data sources, form actions, export
+  _db.js                  Storage: js-doc-store + CloudflareKVAdapter + versioning
+  js-doc-store.js         Document database (zero-dep, MongoDB-style queries)
+  execute.js              POST /api/execute — single method
+  batch.js                POST /api/batch — multiple methods
+  poll.js                 GET /api/poll — versioned polling (cheap)
+  sync.js                 POST /api/sync — editor pushes changes
+  session.js              Session CRUD
+  changelog.js            Change history
+  health.js               Health check
+  schemas.js              AI tool definitions
 
-src/                    # Core framework (21 modules, 80+ files)
-  core/                 # EventEmitter, ReactiveModel, ReactiveCollection
-  editor/               # Editor API
-  dom_components/       # Component system (20+ types)
-  style_manager/        # CSS property editor
-  ...
-
-cli.cjs                 # Zero-dep CLI (Node.js built-ins only)
-test/                   # 863+ tests (Vitest)
+src/                      Core framework (21 modules, 80+ files)
+cli.cjs                   CLI (zero dependencies, Node.js built-ins only)
+test/                     913+ tests
 ```
+
+### Optimizations
+- **Adaptive polling**: 2s → 5s → 10s → 30s when idle, resets on change
+- **KV versioning**: poll reads only version (10 bytes) instead of full page
+- **Skip when hidden**: no polling or syncing when tab is not visible
+- **js-doc-store**: indexed queries, batch persistence, collection-based storage
+
+---
 
 ## Stats
 
 | Metric | Value |
 |--------|-------|
 | Runtime dependencies | **0** |
-| API methods | **19** |
+| API methods | **20** |
 | Section templates | **10** |
-| Block types | **30** |
-| Test cases | **863+** |
+| Block types (editor) | **30** |
+| Test cases | **913+** |
 | Framework modules | **21** |
-| Component types | **20+** |
+| Hosting cost | **$0** (Cloudflare free tier) |
 
 ## License
 
