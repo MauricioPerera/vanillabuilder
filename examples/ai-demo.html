@@ -3,41 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VanillaBuilder AI Demo</title>
+  <title>VanillaBuilder AI API Playground</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     body { display: flex; flex-direction: column; background: #0f0f1a; color: #cdd6f4; }
 
-    /* Header */
     .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #16162a; border-bottom: 1px solid #2a2a4a; }
     .header__title { font-weight: 700; font-size: 16px; color: #a78bfa; }
-    .header__api { display: flex; gap: 8px; align-items: center; }
-    .header__api select, .header__api input { padding: 6px 10px; background: #252542; border: 1px solid #3a3a5a; border-radius: 6px; color: #cdd6f4; font-size: 13px; }
-    .header__api input { width: 300px; }
-    .header__api select { width: 120px; }
+    .header__badge { font-size: 11px; background: #7c3aed33; color: #a78bfa; padding: 4px 10px; border-radius: 12px; }
 
-    /* Main */
     .main { display: flex; flex: 1; overflow: hidden; }
 
-    /* Chat */
-    .chat { width: 400px; min-width: 400px; display: flex; flex-direction: column; border-right: 1px solid #2a2a4a; background: #1a1a2e; }
-    .chat__messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-    .chat__input-area { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #2a2a4a; }
-    .chat__input { flex: 1; padding: 10px 14px; background: #252542; border: 1px solid #3a3a5a; border-radius: 8px; color: #cdd6f4; font-size: 14px; resize: none; }
-    .chat__input:focus { outline: none; border-color: #7c3aed; }
-    .chat__send { padding: 10px 20px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
-    .chat__send:hover { background: #6d28d9; }
-    .chat__send:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* Left: API Console */
+    .console { width: 480px; min-width: 480px; display: flex; flex-direction: column; border-right: 1px solid #2a2a4a; background: #1a1a2e; }
+    .console__tabs { display: flex; border-bottom: 1px solid #2a2a4a; }
+    .console__tab { flex: 1; padding: 10px; text-align: center; font-size: 12px; background: transparent; border: none; color: #6c7086; cursor: pointer; border-bottom: 2px solid transparent; }
+    .console__tab:hover { color: #cdd6f4; }
+    .console__tab.active { color: #a78bfa; border-bottom-color: #a78bfa; }
 
-    /* Messages */
-    .msg { max-width: 90%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
-    .msg--user { align-self: flex-end; background: #7c3aed; color: white; border-bottom-right-radius: 4px; }
-    .msg--ai { align-self: flex-start; background: #252542; color: #cdd6f4; border-bottom-left-radius: 4px; }
-    .msg--system { align-self: center; background: transparent; color: #6c7086; font-size: 12px; font-style: italic; }
-    .msg--tool { align-self: flex-start; background: #1e3a2e; color: #a6e3a1; font-family: monospace; font-size: 12px; border-radius: 8px; }
+    /* Quick Actions */
+    .quick { padding: 12px; overflow-y: auto; flex: 1; }
+    .quick__section { margin-bottom: 16px; }
+    .quick__label { font-size: 11px; color: #6c7086; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .quick__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .quick__btn {
+      padding: 10px 12px; background: #252542; border: 1px solid #3a3a5a; border-radius: 8px;
+      color: #cdd6f4; font-size: 12px; cursor: pointer; text-align: left; transition: all .15s;
+    }
+    .quick__btn:hover { border-color: #7c3aed; background: #2d2d50; }
+    .quick__btn small { display: block; color: #6c7086; font-size: 10px; margin-top: 2px; }
 
-    /* Preview */
+    /* Code Editor */
+    .editor-area { display: none; flex-direction: column; flex: 1; }
+    .editor-area.active { display: flex; }
+    .code-input {
+      flex: 1; padding: 16px; background: #1a1a2e; border: none; color: #89b4fa;
+      font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 13px; resize: none; outline: none;
+      line-height: 1.6;
+    }
+    .code-bar { display: flex; justify-content: space-between; padding: 8px 12px; border-top: 1px solid #2a2a4a; }
+    .code-bar__btn {
+      padding: 8px 20px; background: #7c3aed; color: white; border: none; border-radius: 6px;
+      font-weight: 600; cursor: pointer; font-size: 13px;
+    }
+    .code-bar__btn:hover { background: #6d28d9; }
+    .code-bar__btn--secondary { background: #252542; border: 1px solid #3a3a5a; color: #cdd6f4; }
+    .code-bar__btn--secondary:hover { background: #2d2d50; }
+
+    /* Output Log */
+    .log { padding: 12px; overflow-y: auto; flex: 1; display: none; }
+    .log.active { display: block; }
+    .log__entry { padding: 8px; margin-bottom: 4px; border-radius: 6px; font-family: monospace; font-size: 12px; line-height: 1.5; }
+    .log__entry--ok { background: #1e3a2e; color: #a6e3a1; }
+    .log__entry--err { background: #3a1e1e; color: #f38ba8; }
+    .log__entry--info { background: #1e2a3a; color: #89b4fa; }
+    .log__method { font-weight: 600; color: #cba6f7; }
+
+    /* Right: Preview */
     .preview { flex: 1; display: flex; flex-direction: column; }
     .preview__tabs { display: flex; border-bottom: 1px solid #2a2a4a; background: #16162a; }
     .preview__tab { padding: 10px 20px; background: transparent; border: none; color: #6c7086; cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; }
@@ -45,100 +68,166 @@
     .preview__tab.active { color: #a78bfa; border-bottom-color: #a78bfa; }
     .preview__content { flex: 1; position: relative; }
     .preview__iframe { width: 100%; height: 100%; border: none; background: white; }
-    .preview__code { width: 100%; height: 100%; padding: 16px; background: #1a1a2e; color: #89b4fa; font-family: monospace; font-size: 13px; overflow: auto; white-space: pre-wrap; word-break: break-all; display: none; }
+    .preview__code { width: 100%; height: 100%; padding: 16px; background: #1a1a2e; color: #89b4fa; font-family: monospace; font-size: 12px; overflow: auto; white-space: pre-wrap; word-break: break-all; display: none; }
+    .preview__schemas { width: 100%; height: 100%; padding: 16px; background: #1a1a2e; color: #a6e3a1; font-family: monospace; font-size: 12px; overflow: auto; white-space: pre-wrap; display: none; }
 
-    /* Quick actions */
-    .quick { padding: 12px 16px; border-bottom: 1px solid #2a2a4a; }
-    .quick__label { font-size: 11px; color: #6c7086; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .quick__btns { display: flex; flex-wrap: wrap; gap: 6px; }
-    .quick__btn { padding: 6px 12px; background: #252542; border: 1px solid #3a3a5a; border-radius: 6px; color: #9ca3af; font-size: 12px; cursor: pointer; }
-    .quick__btn:hover { border-color: #7c3aed; color: #cdd6f4; }
+    /* Full-width landing demos */
+    .quick__btn--full { grid-column: 1 / -1; background: #7c3aed22; border-color: #7c3aed44; }
+    .quick__btn--full:hover { background: #7c3aed33; border-color: #7c3aed; }
   </style>
 </head>
 <body>
-  <!-- Header -->
   <div class="header">
-    <div class="header__title">VanillaBuilder AI Demo</div>
-    <div class="header__api">
-      <select id="api-provider">
-        <option value="anthropic">Claude</option>
-        <option value="openai">OpenAI</option>
-      </select>
-      <input type="password" id="api-key" placeholder="Paste your API key here..." />
-    </div>
+    <div class="header__title">VanillaBuilder AI API Playground</div>
+    <div class="header__badge">No backend needed - runs in browser</div>
   </div>
 
-  <!-- Main -->
   <div class="main">
-    <!-- Chat -->
-    <div class="chat">
-      <div class="quick">
-        <div class="quick__label">Quick prompts</div>
-        <div class="quick__btns">
-          <button class="quick__btn" data-prompt="Build a landing page for a SaaS product called CloudSync that helps teams collaborate">SaaS Landing</button>
-          <button class="quick__btn" data-prompt="Create a restaurant website with menu, about section, and reservation form">Restaurant</button>
-          <button class="quick__btn" data-prompt="Build a personal portfolio with hero, projects, skills, and contact form">Portfolio</button>
-          <button class="quick__btn" data-prompt="Create a pricing page with 3 plans: Starter $9, Pro $29, Enterprise $99">Pricing Page</button>
+    <!-- Left: Console -->
+    <div class="console">
+      <div class="console__tabs">
+        <button class="console__tab active" data-panel="quick">Quick Actions</button>
+        <button class="console__tab" data-panel="code">JS Console</button>
+        <button class="console__tab" data-panel="log">Output Log</button>
+      </div>
+
+      <!-- Quick Actions Panel -->
+      <div class="quick active" id="panel-quick">
+        <div class="quick__section">
+          <div class="quick__label">Full Page Generators</div>
+          <div class="quick__grid">
+            <button class="quick__btn quick__btn--full" data-action="landing-saas">
+              SaaS Landing Page <small>navbar + hero + features + pricing + cta + footer</small>
+            </button>
+            <button class="quick__btn quick__btn--full" data-action="landing-portfolio">
+              Portfolio Page <small>navbar + hero + stats + features + testimonials + contact + footer</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="quick__section">
+          <div class="quick__label">Add Sections</div>
+          <div class="quick__grid">
+            <button class="quick__btn" data-action="section-navbar">Navbar</button>
+            <button class="quick__btn" data-action="section-hero">Hero</button>
+            <button class="quick__btn" data-action="section-features">Features</button>
+            <button class="quick__btn" data-action="section-stats">Stats</button>
+            <button class="quick__btn" data-action="section-pricing">Pricing</button>
+            <button class="quick__btn" data-action="section-cta">CTA</button>
+            <button class="quick__btn" data-action="section-testimonials">Testimonials</button>
+            <button class="quick__btn" data-action="section-faq">FAQ</button>
+            <button class="quick__btn" data-action="section-contact">Contact Form</button>
+            <button class="quick__btn" data-action="section-footer">Footer</button>
+          </div>
+        </div>
+
+        <div class="quick__section">
+          <div class="quick__label">Actions</div>
+          <div class="quick__grid">
+            <button class="quick__btn" data-action="clear">Clear Page</button>
+            <button class="quick__btn" data-action="tree">Component Tree</button>
+            <button class="quick__btn" data-action="info">Page Info</button>
+            <button class="quick__btn" data-action="sections-list">Available Sections</button>
+          </div>
+        </div>
+
+        <div class="quick__section">
+          <div class="quick__label">Custom HTML</div>
+          <div class="quick__grid">
+            <button class="quick__btn quick__btn--full" data-action="custom-html">
+              Add Custom HTML <small>Opens JS console with addHTML template</small>
+            </button>
+          </div>
         </div>
       </div>
-      <div class="chat__messages" id="messages">
-        <div class="msg msg--system">Type a prompt to build a web page with AI. You need an API key above.</div>
+
+      <!-- Code Editor Panel -->
+      <div class="editor-area" id="panel-code">
+        <textarea class="code-input" id="code-input" spellcheck="false">// VanillaBuilder AI API - use 'builder' to call any method
+// Every method returns { ok: boolean, data?: any, error?: string }
+
+builder.clearPage();
+
+builder.addSection('hero', {
+  headline: 'Build Pages with AI',
+  subheadline: 'Any agent can use this API to create web pages.',
+  buttonText: 'Get Started',
+  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+});
+
+builder.addSection('features', {
+  heading: 'How It Works',
+  items: [
+    { icon: '&#129302;', title: 'Agent Calls API', description: 'Any AI agent calls builder.execute() with method name and params.' },
+    { icon: '&#9997;', title: 'Builder Creates UI', description: 'VanillaBuilder generates the HTML components and CSS.' },
+    { icon: '&#127912;', title: 'Export Result', description: 'Call getFullPage() to get the complete HTML output.' }
+  ]
+});
+
+builder.addSection('footer', { copyright: '2026 VanillaBuilder' });
+
+// Get the result
+const result = builder.getFullPage({ title: 'AI Built Page' });
+console.log('Generated', result.data.length, 'characters');
+</textarea>
+        <div class="code-bar">
+          <button class="code-bar__btn--secondary code-bar__btn" id="btn-clear-code">Clear</button>
+          <button class="code-bar__btn" id="btn-run">Run Code</button>
+        </div>
       </div>
-      <div class="chat__input-area">
-        <textarea class="chat__input" id="prompt-input" rows="2" placeholder="Describe the page you want to build..."></textarea>
-        <button class="chat__send" id="send-btn">Build</button>
-      </div>
+
+      <!-- Output Log Panel -->
+      <div class="log" id="panel-log"></div>
     </div>
 
-    <!-- Preview -->
+    <!-- Right: Preview -->
     <div class="preview">
       <div class="preview__tabs">
         <button class="preview__tab active" data-view="preview">Preview</button>
-        <button class="preview__tab" data-view="code">HTML Code</button>
+        <button class="preview__tab" data-view="html">HTML Output</button>
+        <button class="preview__tab" data-view="schemas">Tool Schemas</button>
       </div>
       <div class="preview__content">
         <iframe class="preview__iframe" id="preview-iframe"></iframe>
         <pre class="preview__code" id="preview-code"></pre>
+        <pre class="preview__schemas" id="preview-schemas"></pre>
       </div>
     </div>
   </div>
 
   <script type="module">
-    import { AIBuilder, getToolDefinitions } from '../src/ai/index.js';
+    import { AIBuilder, getToolDefinitions, schemas } from '../src/ai/index.js';
 
-    // ── State ──
+    // ── Initialize builder ──
     const builder = new AIBuilder();
     builder.init();
-    let conversationHistory = [];
-    let isProcessing = false;
+    window.builder = builder; // Expose globally for console & code editor
 
-    // ── DOM refs ──
-    const messagesEl = document.getElementById('messages');
-    const inputEl = document.getElementById('prompt-input');
-    const sendBtn = document.getElementById('send-btn');
+    const logEl = document.getElementById('panel-log');
     const iframeEl = document.getElementById('preview-iframe');
     const codeEl = document.getElementById('preview-code');
-    const providerEl = document.getElementById('api-provider');
-    const apiKeyEl = document.getElementById('api-key');
+    const schemasEl = document.getElementById('preview-schemas');
 
-    // ── Chat UI ──
-    function addMessage(text, type = 'ai') {
-      const div = document.createElement('div');
-      div.className = `msg msg--${type}`;
-      div.textContent = text;
-      messagesEl.appendChild(div);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+    // Show tool schemas
+    schemasEl.textContent = JSON.stringify(getToolDefinitions('anthropic'), null, 2);
+
+    // ── Logging ──
+    function log(method, params, result) {
+      const entry = document.createElement('div');
+      entry.className = `log__entry log__entry--${result.ok ? 'ok' : 'err'}`;
+      const paramStr = params ? JSON.stringify(params).slice(0, 150) : '';
+      entry.innerHTML = `<span class="log__method">${method}</span>(${paramStr}) → ${result.ok ? 'OK' : 'ERROR: ' + result.error}${result.data && typeof result.data !== 'string' ? ' ' + JSON.stringify(result.data).slice(0, 100) : ''}`;
+      logEl.prepend(entry);
     }
 
-    function addToolMessage(method, params, result) {
-      const div = document.createElement('div');
-      div.className = 'msg msg--tool';
-      const paramStr = JSON.stringify(params, null, 1).slice(0, 200);
-      div.textContent = `${method}(${paramStr})${result.ok ? ' OK' : ' ERR: ' + result.error}`;
-      messagesEl.appendChild(div);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+    function logInfo(msg) {
+      const entry = document.createElement('div');
+      entry.className = 'log__entry log__entry--info';
+      entry.textContent = msg;
+      logEl.prepend(entry);
     }
 
+    // ── Update preview ──
     function updatePreview() {
       const { data: html } = builder.getFullPage({ title: 'AI Generated Page' });
       if (html) {
@@ -147,218 +236,133 @@
       }
     }
 
+    // ── Execute and log ──
+    function exec(method, params) {
+      const result = builder.execute(method, params || {});
+      log(method, params, result);
+      updatePreview();
+      return result;
+    }
+
+    // ── Quick Actions ──
+    const actions = {
+      'clear': () => exec('clearPage'),
+      'tree': () => { const r = exec('getComponentTree'); logInfo(JSON.stringify(r.data, null, 2)); },
+      'info': () => { const r = exec('getPageInfo'); logInfo(JSON.stringify(r.data, null, 2)); },
+      'sections-list': () => { const r = exec('getAvailableSections'); logInfo(JSON.stringify(r.data, null, 2)); },
+
+      'section-navbar': () => exec('addSection', { type: 'navbar', options: { brand: 'MyBrand', links: [{text:'Home',url:'#'},{text:'About',url:'#'},{text:'Contact',url:'#'}], ctaText: 'Sign Up' } }),
+      'section-hero': () => exec('addSection', { type: 'hero', options: { headline: 'Build Amazing Things', subheadline: 'The fastest way to create web pages with AI.', buttonText: 'Get Started' } }),
+      'section-features': () => exec('addSection', { type: 'features', options: { heading: 'Features', items: [{icon:'&#9889;',title:'Lightning Fast',description:'Zero dependencies, instant load.'},{icon:'&#128640;',title:'Modern Stack',description:'ES6+ vanilla JavaScript.'},{icon:'&#128295;',title:'Fully Extensible',description:'Plugin system for anything.'}] } }),
+      'section-stats': () => exec('addSection', { type: 'stats', options: { items: [{value:'10K+',label:'Users'},{value:'99.9%',label:'Uptime'},{value:'50+',label:'Countries'},{value:'24/7',label:'Support'}] } }),
+      'section-pricing': () => exec('addSection', { type: 'pricing', options: { heading: 'Pricing', plans: [{name:'Starter',price:'$9',features:['5 Projects','Basic Support','1 GB']},{name:'Pro',price:'$29',features:['Unlimited Projects','Priority Support','50 GB'],popular:true},{name:'Enterprise',price:'$99',features:['Everything','Dedicated Support','Custom']}] } }),
+      'section-cta': () => exec('addSection', { type: 'cta', options: { headline: 'Ready to start?', subheadline: 'Join thousands of happy customers.', buttonText: 'Start Free Trial' } }),
+      'section-testimonials': () => exec('addSection', { type: 'testimonials', options: { heading: 'What People Say', items: [{quote:'This changed everything for our team.',author:'Jane Doe',role:'CEO'},{quote:'Incredible product. Highly recommend.',author:'John Smith',role:'CTO'}] } }),
+      'section-faq': () => exec('addSection', { type: 'faq', options: { heading: 'FAQ', items: [{question:'How does it work?',answer:'Any AI agent calls our API to build pages step by step.'},{question:'Do I need a backend?',answer:'No! Everything runs in the browser.'},{question:'Is it free?',answer:'Yes, MIT licensed.'}] } }),
+      'section-contact': () => exec('addSection', { type: 'contact', options: { heading: 'Get in Touch', buttonText: 'Send Message' } }),
+      'section-footer': () => exec('addSection', { type: 'footer', options: { copyright: '&copy; 2026 MyBrand. All rights reserved.' } }),
+
+      'landing-saas': () => {
+        exec('clearPage');
+        exec('addSection', { type: 'navbar', options: { brand: 'CloudSync', links: [{text:'Features',url:'#'},{text:'Pricing',url:'#'},{text:'Docs',url:'#'}], ctaText: 'Try Free' } });
+        exec('addSection', { type: 'hero', options: { headline: 'Sync Everything, Everywhere', subheadline: 'CloudSync keeps your team in perfect harmony across every device and platform.', buttonText: 'Start Free Trial', background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)' } });
+        exec('addSection', { type: 'features', options: { heading: 'Why Teams Love CloudSync', items: [{icon:'&#9889;',title:'Real-Time Sync',description:'Changes appear instantly across all devices.'},{icon:'&#128274;',title:'Enterprise Security',description:'End-to-end encryption with SOC2 compliance.'},{icon:'&#127759;',title:'Works Everywhere',description:'Web, iOS, Android, Desktop — always in sync.'}] } });
+        exec('addSection', { type: 'stats', options: { items: [{value:'50K+',label:'Teams'},{value:'99.99%',label:'Uptime'},{value:'150+',label:'Countries'},{value:'4.9/5',label:'Rating'}] } });
+        exec('addSection', { type: 'pricing', options: { heading: 'Simple, Transparent Pricing', plans: [{name:'Starter',price:'$12',period:'/mo',features:['5 Team Members','10 GB Storage','Email Support']},{name:'Business',price:'$39',period:'/mo',features:['Unlimited Members','100 GB Storage','Priority Support','API Access'],popular:true},{name:'Enterprise',price:'$99',period:'/mo',features:['Everything in Business','Custom Integrations','Dedicated Account Manager','SLA']}] } });
+        exec('addSection', { type: 'cta', options: { headline: 'Start syncing today', subheadline: 'Free 14-day trial. No credit card required.', buttonText: 'Get Started Free' } });
+        exec('addSection', { type: 'footer', options: { copyright: '&copy; 2026 CloudSync Inc. All rights reserved.', columns: [{title:'Product',links:[{text:'Features',url:'#'},{text:'Pricing',url:'#'},{text:'Changelog',url:'#'}]},{title:'Company',links:[{text:'About',url:'#'},{text:'Blog',url:'#'},{text:'Careers',url:'#'}]},{title:'Support',links:[{text:'Help Center',url:'#'},{text:'Status',url:'#'},{text:'Contact',url:'#'}]}] } });
+        logInfo('SaaS Landing Page generated!');
+      },
+
+      'landing-portfolio': () => {
+        exec('clearPage');
+        exec('addSection', { type: 'navbar', options: { brand: 'Alex Rivera', links: [{text:'Work',url:'#'},{text:'About',url:'#'},{text:'Blog',url:'#'}], ctaText: 'Hire Me' } });
+        exec('addSection', { type: 'hero', options: { headline: 'Creative Developer & Designer', subheadline: 'I build beautiful, performant digital experiences that people love.', buttonText: 'View My Work', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' } });
+        exec('addSection', { type: 'stats', options: { items: [{value:'8+',label:'Years Experience'},{value:'120+',label:'Projects'},{value:'45',label:'Happy Clients'},{value:'15',label:'Awards'}] } });
+        exec('addSection', { type: 'features', options: { heading: 'What I Do', items: [{icon:'&#127912;',title:'UI/UX Design',description:'Creating intuitive and stunning interfaces.'},{icon:'&#128187;',title:'Web Development',description:'Fast, accessible, modern web applications.'},{icon:'&#128241;',title:'Mobile Apps',description:'Cross-platform mobile experiences.'}] } });
+        exec('addSection', { type: 'testimonials', options: { heading: 'Client Reviews', items: [{quote:'Alex delivered beyond our expectations. Truly talented.',author:'Sarah Chen',role:'CEO, TechCo'},{quote:'Best developer we have ever worked with. Period.',author:'Mark Johnson',role:'Product Lead, StartupXYZ'}] } });
+        exec('addSection', { type: 'contact', options: { heading: 'Let\'s Work Together', buttonText: 'Send Message' } });
+        exec('addSection', { type: 'footer', options: { copyright: '&copy; 2026 Alex Rivera. Crafted with care.' } });
+        logInfo('Portfolio Page generated!');
+      },
+
+      'custom-html': () => {
+        switchPanel('code');
+        document.getElementById('code-input').value = `// Add custom HTML to the page
+builder.addHTML(\`
+  <section style="padding:60px 20px; text-align:center; background:#f8f9fa;">
+    <h2 style="font-size:32px; color:#333; margin-bottom:16px;">Custom Section</h2>
+    <p style="color:#666; max-width:600px; margin:0 auto;">
+      Add any HTML you want. The AI agent would call this same method.
+    </p>
+  </section>
+\`);
+`;
+      },
+    };
+
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = actions[btn.dataset.action];
+        if (action) action();
+      });
+    });
+
     // ── Tab switching ──
+    function switchPanel(name) {
+      document.querySelectorAll('.console__tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.console__tab[data-panel="${name}"]`)?.classList.add('active');
+      document.getElementById('panel-quick').classList.toggle('active', name === 'quick');
+      document.getElementById('panel-code').classList.toggle('active', name === 'code');
+      document.getElementById('panel-log').classList.toggle('active', name === 'log');
+    }
+
+    document.querySelectorAll('.console__tab').forEach(tab => {
+      tab.addEventListener('click', () => switchPanel(tab.dataset.panel));
+    });
+
     document.querySelectorAll('.preview__tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.preview__tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        const view = tab.dataset.view;
-        iframeEl.style.display = view === 'preview' ? '' : 'none';
-        codeEl.style.display = view === 'code' ? '' : 'none';
+        const v = tab.dataset.view;
+        iframeEl.style.display = v === 'preview' ? '' : 'none';
+        codeEl.style.display = v === 'html' ? '' : 'none';
+        schemasEl.style.display = v === 'schemas' ? '' : 'none';
       });
     });
 
-    // ── Quick prompts ──
-    document.querySelectorAll('.quick__btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        inputEl.value = btn.dataset.prompt;
-        inputEl.focus();
-      });
-    });
-
-    // ── System prompt ──
-    const SYSTEM_PROMPT = `You are a web page builder AI. You use the provided tools to build web pages step by step.
-
-WORKFLOW:
-1. Analyze the user's request
-2. Call clearPage() first if starting fresh
-3. Use addSection() for pre-built sections (hero, features, cta, pricing, testimonials, footer, contact, faq, navbar, stats)
-4. Use addHTML() for custom content
-5. Use updateStyle() to customize colors, fonts, spacing
-6. Use addCSSRule() for responsive styles or hover effects
-7. Call getFullPage() when done to verify the result
-
-TIPS:
-- Use addSection() with options to customize text, colors, and content
-- Available section types: hero, features, cta, testimonials, pricing, footer, contact, faq, navbar, stats
-- For custom layouts, use addHTML() with flexbox/grid CSS
-- Use updateStyle() to fine-tune any element after adding it
-- Keep designs modern, clean, and professional
-- Use a consistent color scheme throughout
-
-Always start with clearPage() and end by calling getFullPage() to confirm the result.`;
-
-    // ── API Call ──
-    async function callAI(messages) {
-      const provider = providerEl.value;
-      const apiKey = apiKeyEl.value.trim();
-      if (!apiKey) {
-        addMessage('Please enter your API key above.', 'system');
-        return null;
-      }
-
-      const tools = getToolDefinitions(provider);
-
-      if (provider === 'anthropic') {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 4096,
-            system: SYSTEM_PROMPT,
-            tools,
-            messages,
-          }),
-        });
-        return response.json();
-      }
-
-      if (provider === 'openai') {
-        const openaiMessages = [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            tools,
-            messages: openaiMessages,
-          }),
-        });
-        return response.json();
-      }
-    }
-
-    // ── Process AI response ──
-    async function processResponse(response, messages) {
-      const provider = providerEl.value;
-
-      if (provider === 'anthropic') {
-        if (!response || response.error) {
-          addMessage(`API Error: ${response?.error?.message || 'Unknown error'}`, 'system');
-          return;
-        }
-
-        const content = response.content || [];
-        let hasToolUse = false;
-        const toolResults = [];
-
-        for (const block of content) {
-          if (block.type === 'text' && block.text) {
-            addMessage(block.text, 'ai');
-          }
-          if (block.type === 'tool_use') {
-            hasToolUse = true;
-            const result = builder.execute(block.name, block.input || {});
-            addToolMessage(block.name, block.input, result);
-
-            if (block.name === 'getFullPage' || block.name === 'getHTML') {
-              updatePreview();
-            }
-
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: block.id,
-              content: JSON.stringify(result.ok ? (result.data !== undefined ? { ok: true, summary: typeof result.data === 'string' ? `${result.data.length} chars generated` : result.data } : { ok: true }) : { ok: false, error: result.error }),
-            });
-          }
-        }
-
-        if (hasToolUse && response.stop_reason === 'tool_use') {
-          // Continue the conversation with tool results
-          messages.push({ role: 'assistant', content });
-          messages.push({ role: 'user', content: toolResults });
-
-          const nextResponse = await callAI(messages);
-          await processResponse(nextResponse, messages);
-        } else {
-          updatePreview();
-        }
-      }
-
-      if (provider === 'openai') {
-        if (!response || response.error) {
-          addMessage(`API Error: ${response?.error?.message || 'Unknown error'}`, 'system');
-          return;
-        }
-
-        const choice = response.choices?.[0];
-        if (!choice) return;
-
-        if (choice.message?.content) {
-          addMessage(choice.message.content, 'ai');
-        }
-
-        const toolCalls = choice.message?.tool_calls || [];
-        if (toolCalls.length > 0) {
-          messages.push(choice.message);
-
-          for (const tc of toolCalls) {
-            const params = JSON.parse(tc.function.arguments || '{}');
-            const result = builder.execute(tc.function.name, params);
-            addToolMessage(tc.function.name, params, result);
-
-            if (tc.function.name === 'getFullPage' || tc.function.name === 'getHTML') {
-              updatePreview();
-            }
-
-            messages.push({
-              role: 'tool',
-              tool_call_id: tc.id,
-              content: JSON.stringify(result.ok ? { ok: true } : { ok: false, error: result.error }),
-            });
-          }
-
-          const nextResponse = await callAI(messages);
-          await processResponse(nextResponse, messages);
-        } else {
-          updatePreview();
-        }
-      }
-    }
-
-    // ── Send message ──
-    async function sendMessage() {
-      const prompt = inputEl.value.trim();
-      if (!prompt || isProcessing) return;
-
-      isProcessing = true;
-      sendBtn.disabled = true;
-      sendBtn.textContent = 'Building...';
-
-      addMessage(prompt, 'user');
-      inputEl.value = '';
-
-      conversationHistory.push({ role: 'user', content: prompt });
-
+    // ── Code execution ──
+    document.getElementById('btn-run').addEventListener('click', () => {
+      const code = document.getElementById('code-input').value;
       try {
-        const response = await callAI([...conversationHistory]);
-        await processResponse(response, conversationHistory);
+        const fn = new Function('builder', code);
+        fn(builder);
+        updatePreview();
+        logInfo('Code executed successfully');
+        switchPanel('log');
       } catch (e) {
-        addMessage(`Error: ${e.message}`, 'system');
-      }
-
-      isProcessing = false;
-      sendBtn.disabled = false;
-      sendBtn.textContent = 'Build';
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+        logInfo('ERROR: ' + e.message);
+        switchPanel('log');
       }
     });
 
-    // Expose builder globally for console testing
+    document.getElementById('btn-clear-code').addEventListener('click', () => {
+      document.getElementById('code-input').value = '';
+    });
+
+    // ── Expose for agents ──
     window.builder = builder;
     window.AIBuilder = AIBuilder;
+    window.getToolDefinitions = getToolDefinitions;
+    window.schemas = schemas;
+
+    console.log('%c VanillaBuilder AI API Ready', 'color: #a78bfa; font-weight: bold; font-size: 14px;');
+    console.log('Use window.builder to call any method:');
+    console.log('  builder.addSection("hero", { headline: "Hello!" })');
+    console.log('  builder.getFullPage()');
+    console.log('  builder.execute("addHTML", { html: "<p>Test</p>" })');
+    console.log('  window.getToolDefinitions("anthropic") // for AI function calling schemas');
   </script>
 </body>
 </html>
