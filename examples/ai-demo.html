@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VanillaBuilder AI Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { display: flex; flex-direction: column; background: #0f0f1a; color: #cdd6f4; }
+
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #16162a; border-bottom: 1px solid #2a2a4a; }
+    .header__title { font-weight: 700; font-size: 16px; color: #a78bfa; }
+    .header__api { display: flex; gap: 8px; align-items: center; }
+    .header__api select, .header__api input { padding: 6px 10px; background: #252542; border: 1px solid #3a3a5a; border-radius: 6px; color: #cdd6f4; font-size: 13px; }
+    .header__api input { width: 300px; }
+    .header__api select { width: 120px; }
+
+    /* Main */
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* Chat */
+    .chat { width: 400px; min-width: 400px; display: flex; flex-direction: column; border-right: 1px solid #2a2a4a; background: #1a1a2e; }
+    .chat__messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .chat__input-area { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #2a2a4a; }
+    .chat__input { flex: 1; padding: 10px 14px; background: #252542; border: 1px solid #3a3a5a; border-radius: 8px; color: #cdd6f4; font-size: 14px; resize: none; }
+    .chat__input:focus { outline: none; border-color: #7c3aed; }
+    .chat__send { padding: 10px 20px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    .chat__send:hover { background: #6d28d9; }
+    .chat__send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Messages */
+    .msg { max-width: 90%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+    .msg--user { align-self: flex-end; background: #7c3aed; color: white; border-bottom-right-radius: 4px; }
+    .msg--ai { align-self: flex-start; background: #252542; color: #cdd6f4; border-bottom-left-radius: 4px; }
+    .msg--system { align-self: center; background: transparent; color: #6c7086; font-size: 12px; font-style: italic; }
+    .msg--tool { align-self: flex-start; background: #1e3a2e; color: #a6e3a1; font-family: monospace; font-size: 12px; border-radius: 8px; }
+
+    /* Preview */
+    .preview { flex: 1; display: flex; flex-direction: column; }
+    .preview__tabs { display: flex; border-bottom: 1px solid #2a2a4a; background: #16162a; }
+    .preview__tab { padding: 10px 20px; background: transparent; border: none; color: #6c7086; cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; }
+    .preview__tab:hover { color: #cdd6f4; }
+    .preview__tab.active { color: #a78bfa; border-bottom-color: #a78bfa; }
+    .preview__content { flex: 1; position: relative; }
+    .preview__iframe { width: 100%; height: 100%; border: none; background: white; }
+    .preview__code { width: 100%; height: 100%; padding: 16px; background: #1a1a2e; color: #89b4fa; font-family: monospace; font-size: 13px; overflow: auto; white-space: pre-wrap; word-break: break-all; display: none; }
+
+    /* Quick actions */
+    .quick { padding: 12px 16px; border-bottom: 1px solid #2a2a4a; }
+    .quick__label { font-size: 11px; color: #6c7086; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .quick__btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .quick__btn { padding: 6px 12px; background: #252542; border: 1px solid #3a3a5a; border-radius: 6px; color: #9ca3af; font-size: 12px; cursor: pointer; }
+    .quick__btn:hover { border-color: #7c3aed; color: #cdd6f4; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header__title">VanillaBuilder AI Demo</div>
+    <div class="header__api">
+      <select id="api-provider">
+        <option value="anthropic">Claude</option>
+        <option value="openai">OpenAI</option>
+      </select>
+      <input type="password" id="api-key" placeholder="Paste your API key here..." />
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Chat -->
+    <div class="chat">
+      <div class="quick">
+        <div class="quick__label">Quick prompts</div>
+        <div class="quick__btns">
+          <button class="quick__btn" data-prompt="Build a landing page for a SaaS product called CloudSync that helps teams collaborate">SaaS Landing</button>
+          <button class="quick__btn" data-prompt="Create a restaurant website with menu, about section, and reservation form">Restaurant</button>
+          <button class="quick__btn" data-prompt="Build a personal portfolio with hero, projects, skills, and contact form">Portfolio</button>
+          <button class="quick__btn" data-prompt="Create a pricing page with 3 plans: Starter $9, Pro $29, Enterprise $99">Pricing Page</button>
+        </div>
+      </div>
+      <div class="chat__messages" id="messages">
+        <div class="msg msg--system">Type a prompt to build a web page with AI. You need an API key above.</div>
+      </div>
+      <div class="chat__input-area">
+        <textarea class="chat__input" id="prompt-input" rows="2" placeholder="Describe the page you want to build..."></textarea>
+        <button class="chat__send" id="send-btn">Build</button>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview">
+      <div class="preview__tabs">
+        <button class="preview__tab active" data-view="preview">Preview</button>
+        <button class="preview__tab" data-view="code">HTML Code</button>
+      </div>
+      <div class="preview__content">
+        <iframe class="preview__iframe" id="preview-iframe"></iframe>
+        <pre class="preview__code" id="preview-code"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { AIBuilder, getToolDefinitions } from '../src/ai/index.js';
+
+    // ── State ──
+    const builder = new AIBuilder();
+    builder.init();
+    let conversationHistory = [];
+    let isProcessing = false;
+
+    // ── DOM refs ──
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('prompt-input');
+    const sendBtn = document.getElementById('send-btn');
+    const iframeEl = document.getElementById('preview-iframe');
+    const codeEl = document.getElementById('preview-code');
+    const providerEl = document.getElementById('api-provider');
+    const apiKeyEl = document.getElementById('api-key');
+
+    // ── Chat UI ──
+    function addMessage(text, type = 'ai') {
+      const div = document.createElement('div');
+      div.className = `msg msg--${type}`;
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function addToolMessage(method, params, result) {
+      const div = document.createElement('div');
+      div.className = 'msg msg--tool';
+      const paramStr = JSON.stringify(params, null, 1).slice(0, 200);
+      div.textContent = `${method}(${paramStr})${result.ok ? ' OK' : ' ERR: ' + result.error}`;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function updatePreview() {
+      const { data: html } = builder.getFullPage({ title: 'AI Generated Page' });
+      if (html) {
+        iframeEl.srcdoc = html;
+        codeEl.textContent = html;
+      }
+    }
+
+    // ── Tab switching ──
+    document.querySelectorAll('.preview__tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.preview__tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const view = tab.dataset.view;
+        iframeEl.style.display = view === 'preview' ? '' : 'none';
+        codeEl.style.display = view === 'code' ? '' : 'none';
+      });
+    });
+
+    // ── Quick prompts ──
+    document.querySelectorAll('.quick__btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        inputEl.value = btn.dataset.prompt;
+        inputEl.focus();
+      });
+    });
+
+    // ── System prompt ──
+    const SYSTEM_PROMPT = `You are a web page builder AI. You use the provided tools to build web pages step by step.
+
+WORKFLOW:
+1. Analyze the user's request
+2. Call clearPage() first if starting fresh
+3. Use addSection() for pre-built sections (hero, features, cta, pricing, testimonials, footer, contact, faq, navbar, stats)
+4. Use addHTML() for custom content
+5. Use updateStyle() to customize colors, fonts, spacing
+6. Use addCSSRule() for responsive styles or hover effects
+7. Call getFullPage() when done to verify the result
+
+TIPS:
+- Use addSection() with options to customize text, colors, and content
+- Available section types: hero, features, cta, testimonials, pricing, footer, contact, faq, navbar, stats
+- For custom layouts, use addHTML() with flexbox/grid CSS
+- Use updateStyle() to fine-tune any element after adding it
+- Keep designs modern, clean, and professional
+- Use a consistent color scheme throughout
+
+Always start with clearPage() and end by calling getFullPage() to confirm the result.`;
+
+    // ── API Call ──
+    async function callAI(messages) {
+      const provider = providerEl.value;
+      const apiKey = apiKeyEl.value.trim();
+      if (!apiKey) {
+        addMessage('Please enter your API key above.', 'system');
+        return null;
+      }
+
+      const tools = getToolDefinitions(provider);
+
+      if (provider === 'anthropic') {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 4096,
+            system: SYSTEM_PROMPT,
+            tools,
+            messages,
+          }),
+        });
+        return response.json();
+      }
+
+      if (provider === 'openai') {
+        const openaiMessages = [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            tools,
+            messages: openaiMessages,
+          }),
+        });
+        return response.json();
+      }
+    }
+
+    // ── Process AI response ──
+    async function processResponse(response, messages) {
+      const provider = providerEl.value;
+
+      if (provider === 'anthropic') {
+        if (!response || response.error) {
+          addMessage(`API Error: ${response?.error?.message || 'Unknown error'}`, 'system');
+          return;
+        }
+
+        const content = response.content || [];
+        let hasToolUse = false;
+        const toolResults = [];
+
+        for (const block of content) {
+          if (block.type === 'text' && block.text) {
+            addMessage(block.text, 'ai');
+          }
+          if (block.type === 'tool_use') {
+            hasToolUse = true;
+            const result = builder.execute(block.name, block.input || {});
+            addToolMessage(block.name, block.input, result);
+
+            if (block.name === 'getFullPage' || block.name === 'getHTML') {
+              updatePreview();
+            }
+
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: JSON.stringify(result.ok ? (result.data !== undefined ? { ok: true, summary: typeof result.data === 'string' ? `${result.data.length} chars generated` : result.data } : { ok: true }) : { ok: false, error: result.error }),
+            });
+          }
+        }
+
+        if (hasToolUse && response.stop_reason === 'tool_use') {
+          // Continue the conversation with tool results
+          messages.push({ role: 'assistant', content });
+          messages.push({ role: 'user', content: toolResults });
+
+          const nextResponse = await callAI(messages);
+          await processResponse(nextResponse, messages);
+        } else {
+          updatePreview();
+        }
+      }
+
+      if (provider === 'openai') {
+        if (!response || response.error) {
+          addMessage(`API Error: ${response?.error?.message || 'Unknown error'}`, 'system');
+          return;
+        }
+
+        const choice = response.choices?.[0];
+        if (!choice) return;
+
+        if (choice.message?.content) {
+          addMessage(choice.message.content, 'ai');
+        }
+
+        const toolCalls = choice.message?.tool_calls || [];
+        if (toolCalls.length > 0) {
+          messages.push(choice.message);
+
+          for (const tc of toolCalls) {
+            const params = JSON.parse(tc.function.arguments || '{}');
+            const result = builder.execute(tc.function.name, params);
+            addToolMessage(tc.function.name, params, result);
+
+            if (tc.function.name === 'getFullPage' || tc.function.name === 'getHTML') {
+              updatePreview();
+            }
+
+            messages.push({
+              role: 'tool',
+              tool_call_id: tc.id,
+              content: JSON.stringify(result.ok ? { ok: true } : { ok: false, error: result.error }),
+            });
+          }
+
+          const nextResponse = await callAI(messages);
+          await processResponse(nextResponse, messages);
+        } else {
+          updatePreview();
+        }
+      }
+    }
+
+    // ── Send message ──
+    async function sendMessage() {
+      const prompt = inputEl.value.trim();
+      if (!prompt || isProcessing) return;
+
+      isProcessing = true;
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Building...';
+
+      addMessage(prompt, 'user');
+      inputEl.value = '';
+
+      conversationHistory.push({ role: 'user', content: prompt });
+
+      try {
+        const response = await callAI([...conversationHistory]);
+        await processResponse(response, conversationHistory);
+      } catch (e) {
+        addMessage(`Error: ${e.message}`, 'system');
+      }
+
+      isProcessing = false;
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Build';
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Expose builder globally for console testing
+    window.builder = builder;
+    window.AIBuilder = AIBuilder;
+  </script>
+</body>
+</html>
