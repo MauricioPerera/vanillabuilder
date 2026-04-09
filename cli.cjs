@@ -200,15 +200,23 @@ const commands = {
     else err(res.error);
   },
 
-  async export(file) {
-    const filename = file || 'page.html';
-    const res = await apiExecute('getFullPage', { title: 'VanillaBuilder Page' });
-    if (res.ok) {
-      fs.writeFileSync(filename, res.data);
-      ok('Saved to ' + bold(filename) + ' (' + res.data.length + ' bytes)');
-    } else {
-      err(res.error);
+  async export(dir) {
+    const outDir = dir || 'dist';
+    const res = await apiExecute('exportProject', { title: 'VanillaBuilder Page' });
+    if (!res.ok) { err(res.error); return; }
+
+    // Create output directory
+    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+
+    // Write each file
+    for (const [name, content] of Object.entries(res.data.files)) {
+      const filepath = path.join(outDir, name);
+      fs.writeFileSync(filepath, content);
+      dim('  ' + filepath + ' (' + content.length + ' bytes)');
     }
+
+    ok('Exported ' + res.data.fileCount + ' files to ' + bold(outDir + '/'));
+    dim('Deploy to any static host: Vercel, GitHub Pages, Cloudflare Pages, Netlify');
   },
 
   async open() {
@@ -345,7 +353,7 @@ const commands = {
     log('  vb remove <index>              Remove section by index');
     log('  vb clear                       Clear all content');
     log('  vb preview                     Print full page HTML');
-    log('  vb export [file.html]          Save page to file');
+    log('  vb export [dir]                 Export project files (html+css+js) to dir');
     log('  vb theme [config.json|json]     Set or view design theme');
     log('  vb datasource [list|add|remove] Manage API data sources');
     log('  vb formaction [list|add|remove] Manage form webhooks');

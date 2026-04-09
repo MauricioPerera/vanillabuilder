@@ -500,6 +500,49 @@ function _tpl(template,item){
     return this.getFullPage({ title: config.title || 'Landing Page' });
   }
 
+  /**
+   * Export project as separate files ready to deploy on any static host
+   * Returns: { files: { 'index.html': '...', 'styles.css': '...', 'script.js': '...' } }
+   */
+  exportProject(options = {}) {
+    const t = this._t();
+    const title = options.title || 'Untitled Page';
+    const lang = options.lang || 'en';
+    const body = this.sections.join('\n');
+    const themeCss = themeToCSS(t);
+    const customCss = this.cssRules.join('\n');
+    const scripts = this._generateScripts();
+    // Strip <script> tags from scripts to get pure JS
+    const jsContent = scripts.replace(/<\/?script>/g, '').trim();
+
+    const css = `/* Theme */\n${themeCss}\n\n/* Base */\n*{margin:0;padding:0;box-sizing:border-box}\nbody{font-family:var(--f-body);color:var(--c-text)}\nimg{max-width:100%;height:auto}\na{transition:opacity .2s}\na:hover{opacity:.85}\n\n/* Custom */\n${customCss}`;
+
+    const html = `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${title}</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+${body}
+${jsContent ? '<script src="script.js"></script>' : ''}
+</body>
+</html>`;
+
+    const files = {
+      'index.html': html,
+      'styles.css': css,
+    };
+
+    if (jsContent) {
+      files['script.js'] = jsContent;
+    }
+
+    return { ok: true, data: { files, fileCount: Object.keys(files).length } };
+  }
+
   execute(method, params = {}) {
     const methods = {
       clearPage: () => this.clearPage(),
@@ -521,6 +564,7 @@ function _tpl(template,item){
       getPageInfo: () => this.getPageInfo(),
       getAvailableSections: () => this.getAvailableSections(),
       buildLandingPage: () => this.buildLandingPage(params),
+      exportProject: () => this.exportProject(params),
     };
     const fn = methods[method];
     if (!fn) return { ok: false, error: `Unknown method: "${method}". Available: ${Object.keys(methods).join(', ')}` };

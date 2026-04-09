@@ -18,6 +18,7 @@ const schemas = {
   getPageInfo: { name: 'getPageInfo', description: 'Get page summary', parameters: { type: 'object', properties: {} } },
   getAvailableSections: { name: 'getAvailableSections', description: 'List available section types', parameters: { type: 'object', properties: {} } },
   buildLandingPage: { name: 'buildLandingPage', description: 'Build a full landing page from config', parameters: { type: 'object', properties: { title: { type: 'string' }, navbar: { type: 'object' }, hero: { type: 'object' }, features: { type: 'object' }, stats: { type: 'object' }, testimonials: { type: 'object' }, pricing: { type: 'object' }, cta: { type: 'object' }, faq: { type: 'object' }, contact: { type: 'object' }, footer: { type: 'object' } } } },
+  exportProject: { name: 'exportProject', description: 'Export project as separate files (index.html, styles.css, script.js) ready to deploy on any static host (Vercel, GitHub Pages, Cloudflare Pages, Netlify, etc)', parameters: { type: 'object', properties: { title: { type: 'string', description: 'Page title' }, lang: { type: 'string', default: 'en' } } } },
 };
 
 function getToolDefinitions(format = 'generic') {

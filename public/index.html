@@ -223,6 +223,7 @@
         <button class="topbar__btn" id="btn-session" title="Session info">&#128279; Session</button>
         <button class="topbar__btn" id="btn-preview">Preview</button>
         <button class="topbar__btn" id="btn-code">View Code</button>
+        <button class="topbar__btn" id="btn-export">Export</button>
         <button class="topbar__btn topbar__btn--primary" id="btn-save">Save</button>
         <button class="topbar__toggle active" id="toggle-right" title="Toggle Styles panel">&#9998;</button>
       </div>
@@ -987,6 +988,36 @@
       document.getElementById('code-css').textContent = '/* Inline styles are embedded in HTML */\n\nbody {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n}';
     });
     document.getElementById('close-modal').addEventListener('click', () => { document.getElementById('code-modal').style.display = 'none'; });
+
+    document.getElementById('btn-export').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: pollSessionId, method: 'exportProject', params: { title: 'My Page' } }),
+        });
+        const data = await res.json();
+        if (!data.ok) { showToast('Export failed: ' + data.error); return; }
+
+        const files = data.data.files;
+
+        // Download each file
+        for (const [name, content] of Object.entries(files)) {
+          const blob = new Blob([content], { type: name.endsWith('.html') ? 'text/html' : name.endsWith('.css') ? 'text/css' : 'text/javascript' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = name;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          // Small delay between downloads so browser doesn't block them
+          await new Promise(r => setTimeout(r, 300));
+        }
+
+        showToast('Exported ' + data.data.fileCount + ' files!');
+      } catch (e) {
+        showToast('Export error: ' + e.message);
+      }
+    });
 
     document.getElementById('btn-save').addEventListener('click', () => {
       const data = { html: iframeDoc.body.innerHTML, timestamp: Date.now() };
