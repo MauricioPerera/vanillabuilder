@@ -1548,23 +1548,25 @@
     let pollInterval = 2000;
     let pollTimer = null;
     let noChangeCount = 0;
+    let knownVersion = '0';
 
     async function pollAPI() {
       if (syncPaused) { schedulePoll(); return; }
       try {
-        const res = await fetch(`/api/poll?sessionId=${pollSessionId}`);
+        // Send known version — server skips heavy read if unchanged
+        const res = await fetch(`/api/poll?sessionId=${pollSessionId}&v=${knownVersion}`);
         const data = await res.json();
-        if (data.ok && data.data.html && data.data.html !== lastHtml) {
+        if (data.ok && data.data.changed && data.data.html && data.data.html !== lastHtml) {
           lastHtml = data.data.html;
+          knownVersion = data.data.version || '0';
           const doc = iframe.contentDocument || iframe.contentWindow.document;
           doc.body.innerHTML = data.data.html;
           setupCanvasEvents();
           updateLayers();
-          // Change detected — poll fast
           noChangeCount = 0;
           pollInterval = 2000;
         } else {
-          // No change — slow down
+          if (data.ok && data.data.version) knownVersion = data.data.version;
           noChangeCount++;
           if (noChangeCount > 5) pollInterval = 5000;
           if (noChangeCount > 15) pollInterval = 10000;
