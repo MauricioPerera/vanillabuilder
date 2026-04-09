@@ -1518,7 +1518,7 @@
     }
 
     async function syncToAPI() {
-      if (!iframeDoc) return;
+      if (!iframeDoc || document.hidden) return;
       const html = iframeDoc.body.innerHTML;
       if (html === lastHtml) return;
       lastHtml = html;
@@ -1529,8 +1529,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId: pollSessionId, html }),
         });
+        // After user edits, reset polling to fast (collaborator might respond)
+        noChangeCount = 0;
+        pollInterval = 2000;
       } catch (e) { /* retry next time */ }
-      setTimeout(() => { syncPaused = false; }, 2000); // pause polling briefly after sync
+      setTimeout(() => { syncPaused = false; }, 2000);
     }
 
     // Watch for editor changes (MutationObserver on iframe body)
@@ -1540,9 +1543,14 @@
       observer.observe(iframeDoc.body, { childList: true, subtree: true, attributes: true, characterData: true });
     }
 
-    // API → Editor: poll for agent changes
+    // API → Editor: adaptive polling (saves KV reads)
+    // Starts at 2s, slows to 5s → 10s → 30s if no changes, resets on change
+    let pollInterval = 2000;
+    let pollTimer = null;
+    let noChangeCount = 0;
+
     async function pollAPI() {
-      if (syncPaused) return;
+      if (syncPaused) { schedulePoll(); return; }
       try {
         const res = await fetch(`/api/poll?sessionId=${pollSessionId}`);
         const data = await res.json();
@@ -1552,12 +1560,31 @@
           doc.body.innerHTML = data.data.html;
           setupCanvasEvents();
           updateLayers();
+          // Change detected — poll fast
+          noChangeCount = 0;
+          pollInterval = 2000;
+        } else {
+          // No change — slow down
+          noChangeCount++;
+          if (noChangeCount > 5) pollInterval = 5000;
+          if (noChangeCount > 15) pollInterval = 10000;
+          if (noChangeCount > 30) pollInterval = 30000;
         }
       } catch (e) { /* silently retry */ }
+      schedulePoll();
     }
 
-    // Start polling and watching
-    setInterval(pollAPI, 2000);
+    function schedulePoll() {
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = setTimeout(pollAPI, pollInterval);
+    }
+
+    // Reset to fast polling when user interacts (they might be collaborating)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { noChangeCount = 0; pollInterval = 2000; schedulePoll(); }
+    });
+
+    schedulePoll();
     // Start MutationObserver after first iframe load
     const origInitCanvas = initCanvas;
     iframe.addEventListener('load', () => { setTimeout(watchEditorChanges, 500); });
