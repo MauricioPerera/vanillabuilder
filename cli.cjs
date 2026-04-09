@@ -225,6 +225,28 @@ const commands = {
     }
   },
 
+  async theme(configFileOrJson) {
+    if (!configFileOrJson) {
+      // Show current theme
+      const res = await apiExecute('getTheme');
+      if (res.ok) { log(JSON.stringify(res.data, null, 2)); }
+      else err(res.error);
+      return;
+    }
+    let config;
+    try {
+      // Try as file first, then as inline JSON
+      if (configFileOrJson.startsWith('{')) {
+        config = JSON.parse(configFileOrJson);
+      } else {
+        config = JSON.parse(fs.readFileSync(configFileOrJson, 'utf8'));
+      }
+    } catch { err('Invalid JSON or file: ' + configFileOrJson); return; }
+    const res = await apiExecute('setTheme', config);
+    if (res.ok) ok('Theme applied');
+    else err(res.error);
+  },
+
   async landing(configFile) {
     let config = {};
     if (configFile) {
@@ -266,6 +288,7 @@ const commands = {
     log('  vb clear                       Clear all content');
     log('  vb preview                     Print full page HTML');
     log('  vb export [file.html]          Save page to file');
+    log('  vb theme [config.json|json]     Set or view design theme');
     log('  vb landing [config.json]       Build landing page from config');
     log('  vb reset                       Delete session & create new one');
     log('  vb help                        Show this help');

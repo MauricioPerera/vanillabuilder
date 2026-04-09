@@ -253,9 +253,11 @@
           <span class="selected-info--empty">Select a component</span>
         </div>
         <div class="sidebar__tab-bar">
+          <button class="sidebar__tab" data-rtab="theme">Theme</button>
           <button class="sidebar__tab active" data-rtab="styles">Styles</button>
           <button class="sidebar__tab" data-rtab="traits">Settings</button>
         </div>
+        <div id="panel-theme" style="display:none; padding:12px; overflow-y:auto;"></div>
         <div id="panel-styles"></div>
         <div id="panel-traits" style="display:none;"></div>
       </div>
@@ -607,8 +609,63 @@
         e.stopPropagation();
         selectElement(e.target === iframeDoc.body ? null : e.target);
       });
-      // Delete on keypress
+      // Double-click: inline edit text or change image
+      iframeDoc.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const el = e.target;
+        if (!el || el === iframeDoc.body) return;
+
+        const tag = el.tagName.toLowerCase();
+
+        // Images: prompt for new URL
+        if (tag === 'img') {
+          const src = prompt('Image URL:', el.src || '');
+          if (src !== null) { el.src = src; scheduleSync(); }
+          return;
+        }
+
+        // Icons: detect element with single emoji/short content and large font
+        const text = el.textContent.trim();
+        const cs = iframe.contentWindow.getComputedStyle(el);
+        const fontSize = parseFloat(cs.fontSize);
+        if (text.length <= 2 && fontSize >= 24) {
+          showIconPicker(el);
+          return;
+        }
+
+        // Text elements: make contentEditable
+        const textTags = ['h1','h2','h3','h4','h5','h6','p','span','a','li','label','button','td','th','div'];
+        if (textTags.includes(tag) || el.childNodes.length <= 3) {
+          el.contentEditable = 'true';
+          el.focus();
+          el.style.outline = '2px solid #f59e0b';
+          el.style.outlineOffset = '-2px';
+
+          const done = () => {
+            el.contentEditable = 'false';
+            el.style.outline = '';
+            el.style.outlineOffset = '';
+            el.removeEventListener('blur', done);
+            el.removeEventListener('keydown', onKey);
+            scheduleSync();
+            updateLayers();
+          };
+          const onKey = (ke) => {
+            if (ke.key === 'Escape' || (ke.key === 'Enter' && !ke.shiftKey)) {
+              ke.preventDefault();
+              el.blur();
+            }
+          };
+          el.addEventListener('blur', done);
+          el.addEventListener('keydown', onKey);
+        }
+      });
+
+      // Delete on keypress (only when not editing)
       iframeDoc.addEventListener('keydown', (e) => {
+        // Don't delete while editing text
+        if (e.target.contentEditable === 'true') return;
         if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEl && selectedEl !== iframeDoc.body) {
           selectedEl.remove();
           selectElement(null);
@@ -868,8 +925,10 @@
       tab.addEventListener('click', () => {
         document.querySelectorAll('.sidebar__tab[data-rtab]').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
+        document.getElementById('panel-theme').style.display = tab.dataset.rtab === 'theme' ? '' : 'none';
         document.getElementById('panel-styles').style.display = tab.dataset.rtab === 'styles' ? '' : 'none';
         document.getElementById('panel-traits').style.display = tab.dataset.rtab === 'traits' ? '' : 'none';
+        if (tab.dataset.rtab === 'theme') loadThemePanel();
       });
     });
 
@@ -1000,6 +1059,264 @@
     console.log('Session ID:', pollSessionId);
     console.log('Share this URL to let an agent edit your page:');
     console.log(window.location.origin + '/?sessionId=' + pollSessionId);
+
+    // ── Icon Picker ──
+    function showIconPicker(targetEl) {
+      // Remove existing picker
+      const old = document.getElementById('vb-icon-picker');
+      if (old) old.remove();
+
+      const icons = [
+        '⚡','🚀','💡','🔒','🌍','🎨','⭐','🔧','💎','🎯',
+        '📱','💻','☁️','📊','🔔','❤️','✅','📦','🏆','🎉',
+        '👤','👥','📧','📞','🕐','📍','🔗','📝','🛡️','⚙️',
+        '🔥','✨','💰','📈','🎵','📸','🎬','🌐','🏠','💬',
+        '👍','👁️','🧩','🎁','🪄','🫐','🍀','🌟','💫','🌈',
+      ];
+
+      const picker = document.createElement('div');
+      picker.id = 'vb-icon-picker';
+      picker.style.cssText = 'position:fixed;z-index:10001;background:#1e1e36;border:1px solid #2a2a4a;border-radius:12px;padding:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+
+      // Position near the target element
+      const iframeRect = iframe.getBoundingClientRect();
+      const elRect = targetEl.getBoundingClientRect();
+      picker.style.left = Math.min(iframeRect.left + elRect.left, window.innerWidth - 280) + 'px';
+      picker.style.top = Math.min(iframeRect.top + elRect.bottom + 8, window.innerHeight - 200) + 'px';
+
+      // Header
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      header.innerHTML = '<span style="font-size:12px;color:#a78bfa;font-weight:600;">Pick an icon</span>';
+      const closeBtn = document.createElement('span');
+      closeBtn.textContent = '\u00d7';
+      closeBtn.style.cssText = 'cursor:pointer;color:#6c7086;font-size:18px;';
+      closeBtn.addEventListener('click', () => picker.remove());
+      header.appendChild(closeBtn);
+      picker.appendChild(header);
+
+      // Grid
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(10,1fr);gap:4px;max-width:260px;';
+
+      for (const icon of icons) {
+        const btn = document.createElement('button');
+        btn.textContent = icon;
+        btn.style.cssText = 'width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:4px;font-size:16px;cursor:pointer;padding:0;';
+        btn.addEventListener('mouseenter', () => { btn.style.borderColor = '#7c3aed'; btn.style.background = '#252542'; });
+        btn.addEventListener('mouseleave', () => { btn.style.borderColor = 'transparent'; btn.style.background = 'transparent'; });
+        btn.addEventListener('click', () => {
+          targetEl.textContent = icon;
+          picker.remove();
+          scheduleSync();
+        });
+        grid.appendChild(btn);
+      }
+      picker.appendChild(grid);
+
+      document.body.appendChild(picker);
+
+      // Close on click outside
+      const closeOnOutside = (e) => {
+        if (!picker.contains(e.target)) {
+          picker.remove();
+          document.removeEventListener('mousedown', closeOnOutside);
+        }
+      };
+      setTimeout(() => document.addEventListener('mousedown', closeOnOutside), 100);
+    }
+
+    // ── Theme Panel ──
+    let currentTheme = null;
+
+    async function loadThemePanel() {
+      const panel = document.getElementById('panel-theme');
+      panel.innerHTML = '<div style="color:#6c7086;font-size:12px;">Loading...</div>';
+
+      try {
+        const res = await fetch('/api/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: pollSessionId, method: 'getTheme' }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          currentTheme = data.data;
+          renderThemePanel(panel, currentTheme);
+        } else {
+          panel.innerHTML = '<div style="color:#f38ba8;font-size:12px;">Failed to load theme</div>';
+        }
+      } catch (e) {
+        panel.innerHTML = '<div style="color:#f38ba8;font-size:12px;">Error: ' + e.message + '</div>';
+      }
+    }
+
+    function renderThemePanel(panel, theme) {
+      panel.innerHTML = '';
+
+      // Colors
+      const colorSection = makeThemeSection('Colors');
+      const colorEntries = [
+        ['primary', 'Primary'], ['primaryLight', 'Primary Light'], ['primaryDark', 'Primary Dark'],
+        ['secondary', 'Secondary'], ['accent', 'Accent'],
+        ['background', 'Background'], ['surface', 'Surface'], ['surfaceDark', 'Surface Dark'],
+        ['text', 'Text'], ['textMuted', 'Text Muted'], ['textLight', 'Text Light'], ['border', 'Border'],
+      ];
+      for (const [key, label] of colorEntries) {
+        colorSection.content.appendChild(makeColorRow(label, theme.colors[key], (val) => {
+          theme.colors[key] = val;
+          saveTheme(theme);
+        }));
+      }
+      panel.appendChild(colorSection.el);
+
+      // Fonts
+      const fontSection = makeThemeSection('Fonts');
+      const fontOptions = [
+        "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
+        "Georgia, serif",
+        "'Times New Roman', serif",
+        "Verdana, sans-serif",
+        "'Courier New', monospace",
+        "Inter, sans-serif",
+        "'Playfair Display', serif",
+      ];
+      fontSection.content.appendChild(makeSelectRow('Heading', theme.fonts.heading, fontOptions, (val) => {
+        theme.fonts.heading = val;
+        saveTheme(theme);
+      }));
+      fontSection.content.appendChild(makeSelectRow('Body', theme.fonts.body, fontOptions, (val) => {
+        theme.fonts.body = val;
+        saveTheme(theme);
+      }));
+      panel.appendChild(fontSection.el);
+
+      // Sizes
+      const sizeSection = makeThemeSection('Sizes');
+      const sizeEntries = [
+        ['headingLg', 'Heading Large'], ['headingMd', 'Heading Medium'], ['headingSm', 'Heading Small'],
+        ['body', 'Body'], ['small', 'Small'],
+      ];
+      for (const [key, label] of sizeEntries) {
+        sizeSection.content.appendChild(makeTextRow(label, theme.sizes[key], (val) => {
+          theme.sizes[key] = val;
+          saveTheme(theme);
+        }));
+      }
+      panel.appendChild(sizeSection.el);
+
+      // Spacing
+      const spSection = makeThemeSection('Spacing');
+      const spEntries = [
+        ['sectionY', 'Section Vertical'], ['sectionX', 'Section Horizontal'],
+        ['cardPadding', 'Card Padding'], ['gap', 'Gap'],
+      ];
+      for (const [key, label] of spEntries) {
+        spSection.content.appendChild(makeTextRow(label, theme.spacing[key], (val) => {
+          theme.spacing[key] = val;
+          saveTheme(theme);
+        }));
+      }
+      panel.appendChild(spSection.el);
+
+      // Other
+      const otherSection = makeThemeSection('Other');
+      otherSection.content.appendChild(makeTextRow('Border Radius', theme.borderRadius, (val) => {
+        theme.borderRadius = val;
+        saveTheme(theme);
+      }));
+      otherSection.content.appendChild(makeTextRow('Max Width', theme.maxWidth, (val) => {
+        theme.maxWidth = val;
+        saveTheme(theme);
+      }));
+      panel.appendChild(otherSection.el);
+    }
+
+    function makeThemeSection(title) {
+      const el = document.createElement('div');
+      el.className = 'sm-sector';
+      const titleEl = document.createElement('div');
+      titleEl.className = 'sm-sector__title';
+      titleEl.innerHTML = `<span class="sm-sector__arrow">\u25BC</span>${title}`;
+      const content = document.createElement('div');
+      content.className = 'sm-sector__props';
+      content.style.display = '';
+      let open = true;
+      titleEl.addEventListener('click', () => {
+        open = !open;
+        content.classList.toggle('closed');
+        titleEl.querySelector('.sm-sector__arrow').textContent = open ? '\u25BC' : '\u25B6';
+      });
+      el.appendChild(titleEl);
+      el.appendChild(content);
+      return { el, content };
+    }
+
+    function makeColorRow(label, value, onChange) {
+      const row = document.createElement('div');
+      row.className = 'sm-prop';
+      row.innerHTML = `<div class="sm-prop__label">${label}</div>`;
+      const wrap = document.createElement('div');
+      wrap.className = 'sm-color';
+      const ci = document.createElement('input');
+      ci.type = 'color';
+      ci.value = value || '#000000';
+      const ti = document.createElement('input');
+      ti.type = 'text';
+      ti.className = 'sm-prop__input';
+      ti.value = value || '';
+      ci.addEventListener('input', () => { ti.value = ci.value; onChange(ci.value); });
+      ti.addEventListener('change', () => { ci.value = ti.value; onChange(ti.value); });
+      wrap.appendChild(ci);
+      wrap.appendChild(ti);
+      row.appendChild(wrap);
+      return row;
+    }
+
+    function makeTextRow(label, value, onChange) {
+      const row = document.createElement('div');
+      row.className = 'sm-prop';
+      row.innerHTML = `<div class="sm-prop__label">${label}</div>`;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'sm-prop__input';
+      input.value = value || '';
+      input.addEventListener('change', () => onChange(input.value));
+      row.appendChild(input);
+      return row;
+    }
+
+    function makeSelectRow(label, value, options, onChange) {
+      const row = document.createElement('div');
+      row.className = 'sm-prop';
+      row.innerHTML = `<div class="sm-prop__label">${label}</div>`;
+      const select = document.createElement('select');
+      select.className = 'sm-prop__input sm-prop__input--select';
+      for (const opt of options) {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt.split(',')[0].replace(/'/g, '');
+        if (opt === value) o.selected = true;
+        select.appendChild(o);
+      }
+      select.addEventListener('change', () => onChange(select.value));
+      row.appendChild(select);
+      return row;
+    }
+
+    let saveThemeTimer = null;
+    function saveTheme(theme) {
+      if (saveThemeTimer) clearTimeout(saveThemeTimer);
+      saveThemeTimer = setTimeout(async () => {
+        try {
+          await fetch('/api/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: pollSessionId, method: 'setTheme', params: theme }),
+          });
+        } catch (e) { /* retry next time */ }
+      }, 500);
+    }
 
     // ── Bidirectional Sync ──
     let lastHtml = '';
