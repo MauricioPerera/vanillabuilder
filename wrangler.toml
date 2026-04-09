@@ -1,7 +1,13 @@
 name = "vanillabuilder"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = "public"
+compatibility_flags = ["nodejs_compat"]
 
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "d0c9bf58f79b4abaa97cc22e9220ab95"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vanillabuilder-db"
+database_id = "d0edcae9-7ee0-4b9b-bec1-e494703fc39e"

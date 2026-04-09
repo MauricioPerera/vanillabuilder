@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VanillaBuilder — Login</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f0f1a;color:#cdd6f4;min-height:100vh;display:flex;align-items:center;justify-content:center}
+    .card{width:100%;max-width:400px;padding:40px;background:#1e1e36;border-radius:16px;border:1px solid #2a2a4a}
+    h1{font-size:24px;color:#a78bfa;margin-bottom:8px;text-align:center}
+    .subtitle{color:#6c7086;font-size:14px;text-align:center;margin-bottom:32px}
+    .tabs{display:flex;gap:0;margin-bottom:24px;border-radius:8px;overflow:hidden;border:1px solid #2a2a4a}
+    .tab{flex:1;padding:10px;text-align:center;background:#252542;border:none;color:#6c7086;font-size:13px;cursor:pointer}
+    .tab.active{background:#7c3aed;color:white}
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:12px;color:#6c7086;margin-bottom:6px}
+    .field input{width:100%;padding:12px;background:#252542;border:1px solid #3a3a5a;border-radius:8px;color:#cdd6f4;font-size:14px;outline:none}
+    .field input:focus{border-color:#7c3aed}
+    .btn{width:100%;padding:12px;background:#7c3aed;color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px}
+    .btn:hover{background:#6d28d9}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .error{color:#f38ba8;font-size:13px;text-align:center;margin-top:12px;min-height:20px}
+    .skip{display:block;text-align:center;margin-top:16px;color:#6c7086;font-size:13px;text-decoration:none}
+    .skip:hover{color:#a78bfa}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>VanillaBuilder</h1>
+    <p class="subtitle">Visual page builder with AI API</p>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-login">Login</button>
+      <button class="tab" id="tab-register">Register</button>
+    </div>
+
+    <form id="form">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="password" required autocomplete="current-password" minlength="6" />
+      </div>
+      <button type="submit" class="btn" id="submit-btn">Login</button>
+      <div class="error" id="error"></div>
+    </form>
+
+    <a href="/" class="skip">Continue without account</a>
+  </div>
+
+  <script>
+    let mode = 'login';
+    const tabs = document.querySelectorAll('.tab');
+    const btn = document.getElementById('submit-btn');
+    const err = document.getElementById('error');
+
+    tabs.forEach(tab => tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      mode = tab.id === 'tab-login' ? 'login' : 'register';
+      btn.textContent = mode === 'login' ? 'Login' : 'Create Account';
+      err.textContent = '';
+    }));
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch(`/api/auth/${mode}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          window.location.href = '/';
+        } else {
+          err.textContent = data.error || 'Something went wrong';
+        }
+      } catch (ex) {
+        err.textContent = 'Connection error';
+      }
+
+      btn.disabled = false;
+      btn.textContent = mode === 'login' ? 'Login' : 'Create Account';
+    });
+  </script>
+</body>
+</html>

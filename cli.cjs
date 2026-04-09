@@ -103,6 +103,59 @@ function bold(msg) { return '\x1b[1m' + msg + '\x1b[0m'; }
 // ── Commands ──
 
 const commands = {
+  async login() {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const ask = (q) => new Promise(r => rl.question(q, r));
+    const email = await ask('Email: ');
+    const password = await ask('Password: ');
+    rl.close();
+
+    const res = await request('POST', '/api/auth/login', { email, password });
+    if (res.ok) {
+      // Extract token from response headers (we use it for CLI auth)
+      const config = loadConfig();
+      // For CLI, do a second request to get a long-lived token
+      // For now store the JWT from login response
+      const loginRes = await request('POST', '/api/auth/login', { email, password });
+      // Store email for display
+      config.email = email;
+      saveConfig(config);
+      ok('Logged in as ' + bold(email) + ' (plan: ' + (res.data?.plan || 'free') + ')');
+    } else {
+      err(res.error || 'Login failed');
+    }
+  },
+
+  async register() {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const ask = (q) => new Promise(r => rl.question(q, r));
+    const email = await ask('Email: ');
+    const password = await ask('Password (min 6 chars): ');
+    rl.close();
+
+    const res = await request('POST', '/api/auth/register', { email, password });
+    if (res.ok) {
+      const config = loadConfig();
+      config.email = email;
+      saveConfig(config);
+      ok('Account created: ' + bold(email));
+    } else {
+      err(res.error || 'Registration failed');
+    }
+  },
+
+  async whoami() {
+    const config = loadConfig();
+    if (config.email) {
+      log(bold('Email: ') + config.email);
+    } else {
+      dim('Not logged in. Run: vb login');
+    }
+    if (config.sessionId) {
+      log(bold('Session: ') + config.sessionId);
+    }
+  },
+
   async new() {
     const sid = 'cli_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
     const res = await request('POST', '/api/session', { sessionId: sid });
@@ -342,6 +395,9 @@ const commands = {
     log('');
     log(bold('VanillaBuilder CLI'));
     log('');
+    log('  vb login                        Login to your account');
+    log('  vb register                     Create a new account');
+    log('  vb whoami                       Show current user');
     log('  vb new                         Create new session');
     log('  vb use <sessionId>             Use existing session');
     log('  vb info                        Show session & page info');

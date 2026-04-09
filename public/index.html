@@ -221,6 +221,7 @@
       </div>
       <div class="topbar__actions">
         <button class="topbar__btn" id="btn-session" title="Session info">&#128279; Session</button>
+        <button class="topbar__btn" id="btn-account" title="Account">&#128100; Account</button>
         <button class="topbar__btn" id="btn-preview">Preview</button>
         <button class="topbar__btn" id="btn-code">View Code</button>
         <button class="topbar__btn" id="btn-export">Export</button>
@@ -1622,6 +1623,35 @@
     const origInitCanvas = initCanvas;
     iframe.addEventListener('load', () => { setTimeout(watchEditorChanges, 500); });
     setTimeout(watchEditorChanges, 1000);
+
+    // ── Account ──
+    let currentUser = null;
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const d = await res.json();
+        currentUser = d.data;
+        const btn = document.getElementById('btn-account');
+        if (currentUser) {
+          btn.textContent = currentUser.email.split('@')[0];
+          btn.title = currentUser.email + ' (' + currentUser.plan + ')';
+        } else {
+          btn.textContent = '\u{1F464} Login';
+        }
+      } catch {}
+    }
+    checkAuth();
+
+    document.getElementById('btn-account').addEventListener('click', () => {
+      if (currentUser) {
+        const action = confirm('Logged in as ' + currentUser.email + ' (' + currentUser.plan + ' plan)\n\nLog out?');
+        if (action) {
+          fetch('/api/auth/logout', { method: 'POST' }).then(() => { currentUser = null; checkAuth(); });
+        }
+      } else {
+        window.location.href = '/login.html';
+      }
+    });
 
     console.log('VanillaBuilder loaded. Session:', pollSessionId);
     console.log('Bidirectional sync: editor ↔ API');
