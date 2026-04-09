@@ -79,7 +79,8 @@
       border-radius: 8px; cursor: grab; transition: all .15s; gap: 6px;
     }
     .block-item:hover { background: #2d2d50; border-color: #7c3aed; }
-    .block-item:active { cursor: grabbing; transform: scale(0.96); }
+    .block-item:active { transform: scale(0.96); }
+    .block-item--active { border-color: #7c3aed !important; background: #7c3aed22 !important; box-shadow: 0 0 0 2px #7c3aed44; }
     .block-item__icon { color: #a78bfa; }
     .block-item__icon svg { width: 24px; height: 24px; }
     .block-item__label { font-size: 11px; color: #9ca3af; }
@@ -407,22 +408,165 @@
       }
       const el = document.createElement('div');
       el.className = 'block-item';
-      el.draggable = true;
       el.innerHTML = `<div class="block-item__icon">${block.icon}</div><div class="block-item__label">${block.label}</div>`;
-      el.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/html', block.content);
-        e.dataTransfer.effectAllowed = 'copy';
-      });
-      // Click to add
-      el.addEventListener('dblclick', () => {
-        if (iframeDoc) {
-          const tmp = iframeDoc.createElement('div');
-          tmp.innerHTML = block.content;
-          while (tmp.firstChild) iframeDoc.body.appendChild(tmp.firstChild);
-          updateLayers();
-        }
+      el.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        const sx = e.clientX, sy = e.clientY;
+        const onMove = (me) => {
+          if (Math.abs(me.clientX - sx) > 4 || Math.abs(me.clientY - sy) > 4) {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            startDrag(block, me);
+          }
+        };
+        const onUp = () => {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          // No drag happened → add to end
+          if (iframeDoc) {
+            const tmp = iframeDoc.createElement('div');
+            tmp.innerHTML = block.content;
+            while (tmp.firstChild) iframeDoc.body.appendChild(tmp.firstChild);
+            updateLayers();
+          }
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
       });
       currentGrid.appendChild(el);
+    }
+
+    // ── Drag & Drop with iframe overlay ──
+    let dragGhost = null;
+    let dragOverlay = null;
+    let dragIndicator = null;
+    let dragBlock = null;
+    let dropRef = null; // { el, position: 'before'|'after' }
+
+    function startDrag(block, e) {
+      dragBlock = block;
+
+      // Prevent text selection during drag
+      e.preventDefault();
+      document.body.style.userSelect = 'none';
+      if (iframeDoc) iframeDoc.body.style.userSelect = 'none';
+      window.getSelection()?.removeAllRanges();
+
+      // Ghost follows cursor
+      dragGhost = document.createElement('div');
+      dragGhost.style.cssText = 'position:fixed;z-index:10000;padding:6px 14px;background:#7c3aed;color:white;border-radius:6px;font-size:12px;pointer-events:none;opacity:0.9;';
+      dragGhost.textContent = block.label;
+      document.body.appendChild(dragGhost);
+
+      // Transparent overlay on top of iframe to capture mouse events
+      const canvasArea = document.querySelector('.canvas-area');
+      dragOverlay = document.createElement('div');
+      dragOverlay.style.cssText = 'position:absolute;inset:0;z-index:100;cursor:grabbing;';
+      canvasArea.style.position = 'relative';
+      canvasArea.appendChild(dragOverlay);
+
+      // Drop indicator line inside iframe
+      dragIndicator = iframeDoc.createElement('div');
+      dragIndicator.style.cssText = 'height:3px;background:#7c3aed;margin:0;padding:0;pointer-events:none;transition:none;';
+
+      document.addEventListener('mousemove', onDragMove);
+      document.addEventListener('mouseup', onDragEnd);
+      onDragMove(e);
+    }
+
+    function onDragMove(e) {
+      // Move ghost
+      dragGhost.style.left = (e.clientX + 12) + 'px';
+      dragGhost.style.top = (e.clientY + 12) + 'px';
+
+      // Remove previous indicator
+      if (dragIndicator.parentElement) dragIndicator.remove();
+      dropRef = null;
+
+      // Get iframe position
+      const iframeRect = iframe.getBoundingClientRect();
+      const x = e.clientX - iframeRect.left;
+      const y = e.clientY - iframeRect.top;
+
+      // Out of iframe bounds
+      if (x < 0 || y < 0 || x > iframeRect.width || y > iframeRect.height) return;
+
+      const scrollTop = iframeDoc.documentElement.scrollTop || 0;
+
+      // Collect ALL visible elements and find the closest edge to the cursor
+      const allEls = iframeDoc.body.querySelectorAll('*');
+      let bestDist = Infinity;
+      let bestRef = null;
+
+      for (const el of allEls) {
+        if (el === dragIndicator || el.tagName === 'STYLE' || el.tagName === 'SCRIPT') continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) continue;
+
+        // Distance to top edge of this element → insert before
+        const distTop = Math.abs(y - rect.top);
+        if (distTop < bestDist) {
+          bestDist = distTop;
+          bestRef = { parent: el.parentElement, before: el };
+        }
+
+        // Distance to bottom edge → insert after
+        const distBot = Math.abs(y - rect.bottom);
+        if (distBot < bestDist) {
+          bestDist = distBot;
+          bestRef = { parent: el.parentElement, before: el.nextSibling };
+        }
+      }
+
+      // Also check end of body
+      const bodyBottom = iframeDoc.body.getBoundingClientRect().bottom;
+      if (Math.abs(y - bodyBottom) < bestDist) {
+        bestRef = { parent: iframeDoc.body, before: null };
+      }
+
+      if (!bestRef) {
+        iframeDoc.body.appendChild(dragIndicator);
+        dropRef = { parent: iframeDoc.body, before: null };
+        return;
+      }
+
+      try {
+        bestRef.parent.insertBefore(dragIndicator, bestRef.before);
+        dropRef = bestRef;
+      } catch (e) {
+        iframeDoc.body.appendChild(dragIndicator);
+        dropRef = { parent: iframeDoc.body, before: null };
+      }
+    }
+
+    function onDragEnd(e) {
+      document.removeEventListener('mousemove', onDragMove);
+      document.removeEventListener('mouseup', onDragEnd);
+
+      // Cleanup UI
+      // Restore text selection
+      document.body.style.userSelect = '';
+      if (iframeDoc) iframeDoc.body.style.userSelect = '';
+
+      if (dragGhost) { dragGhost.remove(); dragGhost = null; }
+      if (dragOverlay) { dragOverlay.remove(); dragOverlay = null; }
+      if (dragIndicator && dragIndicator.parentElement) dragIndicator.remove();
+
+      if (!dragBlock || !iframeDoc) { dragBlock = null; return; }
+
+      // Insert the block content
+      const tmp = iframeDoc.createElement('div');
+      tmp.innerHTML = dragBlock.content;
+
+      if (dropRef && dropRef.parent) {
+        while (tmp.firstChild) dropRef.parent.insertBefore(tmp.firstChild, dropRef.before);
+      } else {
+        while (tmp.firstChild) iframeDoc.body.appendChild(tmp.firstChild);
+      }
+
+      updateLayers();
+      dragBlock = null;
+      dropRef = null;
     }
 
     // ── Canvas iframe ──
@@ -444,24 +588,8 @@
       setupCanvasEvents();
       updateLayers();
 
-      // Drag & drop from blocks
-      iframeDoc.body.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
-      iframeDoc.body.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const html = e.dataTransfer.getData('text/html');
-        if (html) {
-          const tmp = iframeDoc.createElement('div');
-          tmp.innerHTML = html;
-          // Insert near drop point
-          const target = e.target.closest('[data-vb-selected]') || e.target;
-          if (target === iframeDoc.body || target.parentElement === iframeDoc.body) {
-            while (tmp.firstChild) iframeDoc.body.appendChild(tmp.firstChild);
-          } else {
-            while (tmp.firstChild) target.parentElement.insertBefore(tmp.firstChild, target.nextSibling);
-          }
-          updateLayers();
-        }
-      });
+      // Drag cursor style on iframe
+      iframeDoc.body.addEventListener('dragover', (e) => e.preventDefault());
     }
     // Trigger initial load
     initCanvas();
@@ -873,10 +1001,43 @@
     console.log('Share this URL to let an agent edit your page:');
     console.log(window.location.origin + '/?sessionId=' + pollSessionId);
 
-    // ── API Polling: editor auto-updates when an agent modifies the page via API ──
+    // ── Bidirectional Sync ──
     let lastHtml = '';
+    let syncPaused = false; // pause polling while editor is syncing
 
+    // Editor → API: push changes when user modifies anything
+    let syncTimer = null;
+    function scheduleSync() {
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(syncToAPI, 1500); // debounce 1.5s
+    }
+
+    async function syncToAPI() {
+      if (!iframeDoc) return;
+      const html = iframeDoc.body.innerHTML;
+      if (html === lastHtml) return;
+      lastHtml = html;
+      syncPaused = true;
+      try {
+        await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: pollSessionId, html }),
+        });
+      } catch (e) { /* retry next time */ }
+      setTimeout(() => { syncPaused = false; }, 2000); // pause polling briefly after sync
+    }
+
+    // Watch for editor changes (MutationObserver on iframe body)
+    function watchEditorChanges() {
+      if (!iframeDoc) return;
+      const observer = new MutationObserver(() => scheduleSync());
+      observer.observe(iframeDoc.body, { childList: true, subtree: true, attributes: true, characterData: true });
+    }
+
+    // API → Editor: poll for agent changes
     async function pollAPI() {
+      if (syncPaused) return;
       try {
         const res = await fetch(`/api/poll?sessionId=${pollSessionId}`);
         const data = await res.json();
@@ -886,17 +1047,20 @@
           doc.body.innerHTML = data.data.html;
           setupCanvasEvents();
           updateLayers();
-          document.getElementById('status-dot')?.classList.add('active');
-          setTimeout(() => document.getElementById('status-dot')?.classList.remove('active'), 1000);
         }
       } catch (e) { /* silently retry */ }
     }
 
-    // Poll every 2 seconds
+    // Start polling and watching
     setInterval(pollAPI, 2000);
+    // Start MutationObserver after first iframe load
+    const origInitCanvas = initCanvas;
+    iframe.addEventListener('load', () => { setTimeout(watchEditorChanges, 500); });
+    setTimeout(watchEditorChanges, 1000);
 
-    console.log('VanillaBuilder loaded. Polling session:', pollSessionId);
-    console.log('An agent can modify this page via: POST /api/execute or /api/batch with sessionId:', pollSessionId);
+    console.log('VanillaBuilder loaded. Session:', pollSessionId);
+    console.log('Bidirectional sync: editor ↔ API');
+    console.log('Agent endpoint: POST /api/execute or /api/batch with sessionId:', pollSessionId);
   </script>
 </body>
 </html>
