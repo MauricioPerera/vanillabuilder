@@ -256,10 +256,12 @@
           <button class="sidebar__tab" data-rtab="theme">Theme</button>
           <button class="sidebar__tab active" data-rtab="styles">Styles</button>
           <button class="sidebar__tab" data-rtab="traits">Settings</button>
+          <button class="sidebar__tab" data-rtab="data">Data</button>
         </div>
         <div id="panel-theme" style="display:none; padding:12px; overflow-y:auto;"></div>
         <div id="panel-styles"></div>
         <div id="panel-traits" style="display:none;"></div>
+        <div id="panel-data" style="display:none; padding:12px; overflow-y:auto;"></div>
       </div>
     </div>
   </div>
@@ -928,7 +930,9 @@
         document.getElementById('panel-theme').style.display = tab.dataset.rtab === 'theme' ? '' : 'none';
         document.getElementById('panel-styles').style.display = tab.dataset.rtab === 'styles' ? '' : 'none';
         document.getElementById('panel-traits').style.display = tab.dataset.rtab === 'traits' ? '' : 'none';
+        document.getElementById('panel-data').style.display = tab.dataset.rtab === 'data' ? '' : 'none';
         if (tab.dataset.rtab === 'theme') loadThemePanel();
+        if (tab.dataset.rtab === 'data') loadDataPanel();
       });
     });
 
@@ -1124,6 +1128,190 @@
         }
       };
       setTimeout(() => document.addEventListener('mousedown', closeOnOutside), 100);
+    }
+
+    // ── Data Panel ──
+    async function loadDataPanel() {
+      const panel = document.getElementById('panel-data');
+      panel.innerHTML = '';
+
+      // Fetch current data sources and form actions
+      let dataSources = [], formActions = [];
+      try {
+        const dsRes = await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'getDataSources'}) });
+        const dsData = await dsRes.json();
+        if (dsData.ok) dataSources = dsData.data;
+
+        const faRes = await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'getFormActions'}) });
+        const faData = await faRes.json();
+        if (faData.ok) formActions = faData.data;
+      } catch(e) {}
+
+      // ── Data Sources section ──
+      const dsHeader = document.createElement('div');
+      dsHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      dsHeader.innerHTML = '<span style="font-size:12px;font-weight:600;color:#a78bfa;text-transform:uppercase;letter-spacing:0.5px;">API Data Sources</span>';
+      const addDsBtn = document.createElement('button');
+      addDsBtn.textContent = '+ Add';
+      addDsBtn.style.cssText = 'padding:4px 10px;background:#252542;border:1px solid #3a3a5a;border-radius:4px;color:#cdd6f4;font-size:11px;cursor:pointer;';
+      addDsBtn.addEventListener('click', () => showDataSourceForm(panel));
+      dsHeader.appendChild(addDsBtn);
+      panel.appendChild(dsHeader);
+
+      if (dataSources.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding:12px;color:#4a4a6a;font-size:12px;text-align:center;border:1px dashed #2a2a4a;border-radius:6px;margin-bottom:16px;';
+        empty.textContent = 'No data sources. Click + Add to connect an API.';
+        panel.appendChild(empty);
+      } else {
+        for (const ds of dataSources) {
+          panel.appendChild(makeDataSourceCard(ds));
+        }
+      }
+
+      // Separator
+      const sep = document.createElement('div');
+      sep.style.cssText = 'border-top:1px solid #2a2a4a;margin:16px 0;';
+      panel.appendChild(sep);
+
+      // ── Form Actions section ──
+      const faHeader = document.createElement('div');
+      faHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+      faHeader.innerHTML = '<span style="font-size:12px;font-weight:600;color:#a78bfa;text-transform:uppercase;letter-spacing:0.5px;">Form Webhooks</span>';
+      const addFaBtn = document.createElement('button');
+      addFaBtn.textContent = '+ Add';
+      addFaBtn.style.cssText = 'padding:4px 10px;background:#252542;border:1px solid #3a3a5a;border-radius:4px;color:#cdd6f4;font-size:11px;cursor:pointer;';
+      addFaBtn.addEventListener('click', () => showFormActionForm(panel));
+      faHeader.appendChild(addFaBtn);
+      panel.appendChild(faHeader);
+
+      if (formActions.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding:12px;color:#4a4a6a;font-size:12px;text-align:center;border:1px dashed #2a2a4a;border-radius:6px;';
+        empty.textContent = 'No form webhooks. Click + Add to connect a form.';
+        panel.appendChild(empty);
+      } else {
+        for (const fa of formActions) {
+          panel.appendChild(makeFormActionCard(fa));
+        }
+      }
+    }
+
+    function makeDataSourceCard(ds) {
+      const card = document.createElement('div');
+      card.style.cssText = 'padding:10px;background:#252542;border:1px solid #2a2a4a;border-radius:6px;margin-bottom:8px;font-size:11px;';
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <strong style="color:#cdd6f4;">${ds.id}</strong>
+          <span class="ds-remove" style="color:#f38ba8;cursor:pointer;font-size:14px;" title="Remove">&times;</span>
+        </div>
+        <div style="color:#6c7086;word-break:break-all;margin-bottom:4px;">${ds.url}</div>
+        ${ds.path ? `<div style="color:#89b4fa;">Path: ${ds.path}</div>` : ''}
+        <div style="color:#6c7086;">Target: ${ds.targetSelector}</div>
+        ${ds.pagination ? `<div style="color:#a6e3a1;">Paginated: ${ds.pagination.perPage}/page</div>` : ''}
+      `;
+      card.querySelector('.ds-remove').addEventListener('click', async () => {
+        await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'removeDataSource',params:{id:ds.id}}) });
+        loadDataPanel();
+      });
+      return card;
+    }
+
+    function makeFormActionCard(fa) {
+      const card = document.createElement('div');
+      card.style.cssText = 'padding:10px;background:#252542;border:1px solid #2a2a4a;border-radius:6px;margin-bottom:8px;font-size:11px;';
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <strong style="color:#cdd6f4;">${fa.id}</strong>
+          <span class="fa-remove" style="color:#f38ba8;cursor:pointer;font-size:14px;" title="Remove">&times;</span>
+        </div>
+        <div style="color:#6c7086;">Form: ${fa.formSelector}</div>
+        <div style="color:#6c7086;word-break:break-all;">Webhook: ${fa.webhookUrl}</div>
+      `;
+      card.querySelector('.fa-remove').addEventListener('click', async () => {
+        await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'removeFormAction',params:{id:fa.id}}) });
+        loadDataPanel();
+      });
+      return card;
+    }
+
+    function showDataSourceForm(panel) {
+      const form = document.createElement('div');
+      form.style.cssText = 'padding:12px;background:#1a1a2e;border:1px solid #7c3aed;border-radius:8px;margin-bottom:12px;';
+      form.innerHTML = `
+        <div style="font-size:12px;font-weight:600;color:#cdd6f4;margin-bottom:10px;">New Data Source</div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">ID</div><input class="sm-prop__input" id="ds-id" placeholder="e.g. posts"/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">API URL</div><input class="sm-prop__input" id="ds-url" placeholder="https://api.example.com/data"/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Data Path</div><input class="sm-prop__input" id="ds-path" placeholder="e.g. data.results (dot notation)"/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Target</div><input class="sm-prop__input" id="ds-target" placeholder="CSS selector, e.g. #posts-list"/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Template</div><textarea class="sm-prop__input" id="ds-template" rows="3" style="height:auto;resize:vertical;" placeholder="<div>{{title}} by {{author.name}}</div>"></textarea></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Per Page</div><input class="sm-prop__input" id="ds-perpage" type="number" placeholder="0 = no pagination"/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Auth Header</div><input class="sm-prop__input" id="ds-auth" placeholder="Bearer xxx (optional)"/></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button id="ds-save" style="flex:1;padding:8px;background:#7c3aed;color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save</button>
+          <button id="ds-cancel" style="padding:8px 12px;background:#252542;color:#cdd6f4;border:1px solid #3a3a5a;border-radius:4px;font-size:12px;cursor:pointer;">Cancel</button>
+        </div>
+      `;
+      panel.prepend(form);
+
+      form.querySelector('#ds-cancel').addEventListener('click', () => { form.remove(); });
+      form.querySelector('#ds-save').addEventListener('click', async () => {
+        const id = form.querySelector('#ds-id').value.trim();
+        const url = form.querySelector('#ds-url').value.trim();
+        const path = form.querySelector('#ds-path').value.trim();
+        const target = form.querySelector('#ds-target').value.trim();
+        const template = form.querySelector('#ds-template').value;
+        const perPage = parseInt(form.querySelector('#ds-perpage').value) || 0;
+        const auth = form.querySelector('#ds-auth').value.trim();
+
+        if (!id || !url || !target || !template) { alert('ID, URL, Target, and Template are required'); return; }
+
+        const params = { id, url, targetSelector: target, template, path };
+        if (perPage > 0) params.pagination = { perPage };
+        if (auth) params.headers = { Authorization: auth };
+
+        await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'addDataSource',params}) });
+        form.remove();
+        loadDataPanel();
+      });
+    }
+
+    function showFormActionForm(panel) {
+      const form = document.createElement('div');
+      form.style.cssText = 'padding:12px;background:#1a1a2e;border:1px solid #7c3aed;border-radius:8px;margin-bottom:12px;';
+      form.innerHTML = `
+        <div style="font-size:12px;font-weight:600;color:#cdd6f4;margin-bottom:10px;">New Form Webhook</div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">ID</div><input class="sm-prop__input" id="fa-id" placeholder="e.g. contact-form"/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Form Selector</div><input class="sm-prop__input" id="fa-selector" placeholder="e.g. form, #my-form"/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Webhook URL</div><input class="sm-prop__input" id="fa-webhook" placeholder="https://hooks.zapier.com/xxx"/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Success Msg</div><input class="sm-prop__input" id="fa-success" placeholder="Sent successfully!"/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Error Msg</div><input class="sm-prop__input" id="fa-error" placeholder="Failed to send."/></div>
+        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Redirect URL</div><input class="sm-prop__input" id="fa-redirect" placeholder="(optional)"/></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button id="fa-save" style="flex:1;padding:8px;background:#7c3aed;color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save</button>
+          <button id="fa-cancel" style="padding:8px 12px;background:#252542;color:#cdd6f4;border:1px solid #3a3a5a;border-radius:4px;font-size:12px;cursor:pointer;">Cancel</button>
+        </div>
+      `;
+      panel.appendChild(form);
+
+      form.querySelector('#fa-cancel').addEventListener('click', () => { form.remove(); });
+      form.querySelector('#fa-save').addEventListener('click', async () => {
+        const id = form.querySelector('#fa-id').value.trim();
+        const formSelector = form.querySelector('#fa-selector').value.trim();
+        const webhookUrl = form.querySelector('#fa-webhook').value.trim();
+        const successMessage = form.querySelector('#fa-success').value.trim() || 'Sent successfully!';
+        const errorMessage = form.querySelector('#fa-error').value.trim() || 'Failed to send.';
+        const redirectUrl = form.querySelector('#fa-redirect').value.trim();
+
+        if (!id || !formSelector || !webhookUrl) { alert('ID, Form Selector, and Webhook URL are required'); return; }
+
+        const params = { id, formSelector, webhookUrl, successMessage, errorMessage };
+        if (redirectUrl) params.redirectUrl = redirectUrl;
+
+        await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'addFormAction',params}) });
+        form.remove();
+        loadDataPanel();
+      });
     }
 
     // ── Theme Panel ──
