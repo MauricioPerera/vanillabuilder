@@ -791,7 +791,31 @@
       btn.classList.toggle('active');
     });
 
-    console.log('VanillaBuilder Demo loaded. Double-click blocks to add. Click elements to select & edit.');
+    // ── API Polling: editor auto-updates when an agent modifies the page via API ──
+    let lastHtml = '';
+    const pollSessionId = new URLSearchParams(window.location.search).get('sessionId') || 'default';
+
+    async function pollAPI() {
+      try {
+        const res = await fetch(`/api/poll?sessionId=${pollSessionId}`);
+        const data = await res.json();
+        if (data.ok && data.data.html && data.data.html !== lastHtml) {
+          lastHtml = data.data.html;
+          const doc = iframe.contentDocument || iframe.contentWindow.document;
+          doc.body.innerHTML = data.data.html;
+          setupCanvasEvents();
+          updateLayers();
+          document.getElementById('status-dot')?.classList.add('active');
+          setTimeout(() => document.getElementById('status-dot')?.classList.remove('active'), 1000);
+        }
+      } catch (e) { /* silently retry */ }
+    }
+
+    // Poll every 2 seconds
+    setInterval(pollAPI, 2000);
+
+    console.log('VanillaBuilder loaded. Polling session:', pollSessionId);
+    console.log('An agent can modify this page via: POST /api/execute or /api/batch with sessionId:', pollSessionId);
   </script>
 </body>
 </html>
