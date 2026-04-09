@@ -173,9 +173,11 @@ export class PageBuilder {
     this.sections = data?.sections || [];
     this.cssRules = data?.cssRules || [];
     this.theme = data?.theme || null;
+    this.dataSources = data?.dataSources || [];
+    this.formActions = data?.formActions || [];
   }
 
-  toJSON() { return { sections: this.sections, cssRules: this.cssRules, theme: this.theme }; }
+  toJSON() { return { sections: this.sections, cssRules: this.cssRules, theme: this.theme, dataSources: this.dataSources, formActions: this.formActions }; }
 
   _t() { return this.theme ? mergeTheme(this.theme) : DEFAULT_THEME; }
 
@@ -191,9 +193,110 @@ export class PageBuilder {
     return { ok: true, data: this._t() };
   }
 
+  // ── Data Sources ──
+
+  /**
+   * Add a data source that fetches from an external API
+   * @param {Object} config
+   * @param {string} config.id - Unique ID for this data source
+   * @param {string} config.url - API endpoint URL
+   * @param {string} [config.method='GET'] - HTTP method
+   * @param {Object} [config.headers] - Request headers (e.g. { Authorization: 'Bearer xxx' })
+   * @param {string} [config.path] - Dot notation path to extract data (e.g. 'data.results', 'response.items')
+   * @param {string} config.targetSelector - CSS selector of container to render into
+   * @param {string} config.template - HTML template per item. Use {{field}} for values, supports dot notation: {{address.city}}
+   * @param {string} [config.emptyMessage] - Message when no data
+   * @param {Object} [config.pagination] - Pagination config
+   * @param {number} [config.pagination.perPage=10] - Items per page
+   * @param {string} [config.pagination.pageParam='page'] - Query param name for page number
+   * @param {string} [config.pagination.limitParam='limit'] - Query param name for limit
+   * @param {number} [config.interval] - Auto-refresh interval in seconds (0 = no refresh)
+   */
+  addDataSource(config) {
+    if (!config || !config.id) return { ok: false, error: 'Missing id' };
+    if (!config.url) return { ok: false, error: 'Missing url' };
+    if (!config.targetSelector) return { ok: false, error: 'Missing targetSelector' };
+    if (!config.template) return { ok: false, error: 'Missing template' };
+
+    // Remove existing with same id
+    this.dataSources = this.dataSources.filter(ds => ds.id !== config.id);
+
+    this.dataSources.push({
+      id: config.id,
+      url: config.url,
+      method: config.method || 'GET',
+      headers: config.headers || {},
+      path: config.path || '',
+      targetSelector: config.targetSelector,
+      template: config.template,
+      emptyMessage: config.emptyMessage || 'No data available',
+      pagination: config.pagination || null,
+      interval: config.interval || 0,
+    });
+
+    return { ok: true, data: { id: config.id } };
+  }
+
+  removeDataSource(id) {
+    const len = this.dataSources.length;
+    this.dataSources = this.dataSources.filter(ds => ds.id !== id);
+    return { ok: true, data: { removed: len !== this.dataSources.length } };
+  }
+
+  getDataSources() {
+    return { ok: true, data: this.dataSources };
+  }
+
+  // ── Form Actions ──
+
+  /**
+   * Add a form action (webhook on submit)
+   * @param {Object} config
+   * @param {string} config.id - Unique ID
+   * @param {string} config.formSelector - CSS selector of the form
+   * @param {string} config.webhookUrl - URL to POST form data to
+   * @param {string} [config.method='POST'] - HTTP method
+   * @param {Object} [config.headers] - Extra headers
+   * @param {string} [config.successMessage='Sent successfully'] - Message on success
+   * @param {string} [config.errorMessage='Failed to send'] - Message on error
+   * @param {boolean} [config.resetOnSuccess=true] - Reset form after success
+   * @param {string} [config.redirectUrl] - Redirect after success (optional)
+   */
+  addFormAction(config) {
+    if (!config || !config.id) return { ok: false, error: 'Missing id' };
+    if (!config.formSelector) return { ok: false, error: 'Missing formSelector' };
+    if (!config.webhookUrl) return { ok: false, error: 'Missing webhookUrl' };
+
+    this.formActions = this.formActions.filter(fa => fa.id !== config.id);
+
+    this.formActions.push({
+      id: config.id,
+      formSelector: config.formSelector,
+      webhookUrl: config.webhookUrl,
+      method: config.method || 'POST',
+      headers: config.headers || {},
+      successMessage: config.successMessage || 'Sent successfully!',
+      errorMessage: config.errorMessage || 'Failed to send. Please try again.',
+      resetOnSuccess: config.resetOnSuccess !== false,
+      redirectUrl: config.redirectUrl || '',
+    });
+
+    return { ok: true, data: { id: config.id } };
+  }
+
+  removeFormAction(id) {
+    const len = this.formActions.length;
+    this.formActions = this.formActions.filter(fa => fa.id !== id);
+    return { ok: true, data: { removed: len !== this.formActions.length } };
+  }
+
+  getFormActions() {
+    return { ok: true, data: this.formActions };
+  }
+
   // ── Page ──
 
-  clearPage() { this.sections = []; this.cssRules = []; return { ok: true }; }
+  clearPage() { this.sections = []; this.cssRules = []; this.dataSources = []; this.formActions = []; return { ok: true }; }
 
   addSection(type, options = {}) {
     const fn = T[type];
@@ -232,6 +335,8 @@ export class PageBuilder {
     const body = this.sections.join('\n');
     const themeCss = themeToCSS(t);
 
+    const scripts = this._generateScripts();
+
     return { ok: true, data: `<!DOCTYPE html>
 <html lang="${lang}">
 <head>
@@ -250,8 +355,119 @@ ${css}
 </head>
 <body>
 ${body}
+${scripts}
 </body>
 </html>` };
+  }
+
+  _generateScripts() {
+    if (this.dataSources.length === 0 && this.formActions.length === 0) return '';
+
+    let js = '';
+
+    // Helper: resolve dot notation path like "data.results.items"
+    js += `
+function _get(obj,path){
+  if(!path)return obj;
+  return path.split('.').reduce((o,k)=>{
+    if(o==null)return undefined;
+    const m=k.match(/^(.+?)\\[(\\d+)\\]$/);
+    if(m)return o[m[1]]?.[parseInt(m[2])];
+    return o[k];
+  },obj);
+}
+function _tpl(template,item){
+  return template.replace(/\\{\\{(.+?)\\}\\}/g,(_,key)=>{
+    const val=_get(item,key.trim());
+    return val!==undefined&&val!==null?val:'';
+  });
+}
+`;
+
+    // Data Sources
+    for (const ds of this.dataSources) {
+      const headers = Object.keys(ds.headers).length ? JSON.stringify(ds.headers) : '{}';
+      const hasPag = ds.pagination && ds.pagination.perPage;
+
+      js += `
+(function(){
+  const cfg=${JSON.stringify({ id: ds.id, url: ds.url, method: ds.method, path: ds.path, target: ds.targetSelector, template: ds.template, empty: ds.emptyMessage, interval: ds.interval })};
+  const headers=${headers};
+  ${hasPag ? `const pag=${JSON.stringify(ds.pagination)}; let page=1;` : ''}
+
+  async function load${ds.id.replace(/[^a-zA-Z0-9]/g,'_')}(${hasPag ? 'p' : ''}){
+    ${hasPag ? 'if(p)page=p;' : ''}
+    const container=document.querySelector(cfg.target);
+    if(!container)return;
+    container.innerHTML='<div style="text-align:center;padding:20px;color:#888;">Loading...</div>';
+    try{
+      let url=cfg.url;
+      ${hasPag ? `
+      const sep=url.includes('?')?'&':'?';
+      url+=sep+(pag.pageParam||'page')+'='+page+'&'+(pag.limitParam||'limit')+'='+(pag.perPage||10);
+      ` : ''}
+      const res=await fetch(url,{method:cfg.method,headers});
+      const json=await res.json();
+      let items=cfg.path?_get(json,cfg.path):json;
+      if(!Array.isArray(items))items=items?[items]:[];
+      if(items.length===0){container.innerHTML='<div style="text-align:center;padding:20px;color:#888;">'+cfg.empty+'</div>';return;}
+      container.innerHTML=items.map(item=>_tpl(cfg.template,item)).join('');
+      ${hasPag ? `
+      // Pagination controls
+      const nav=document.createElement('div');
+      nav.style.cssText='display:flex;justify-content:center;gap:8px;padding:16px;';
+      if(page>1){const b=document.createElement('button');b.textContent='Previous';b.style.cssText='padding:8px 16px;background:var(--c-primary,#7c3aed);color:white;border:none;border-radius:6px;cursor:pointer;';b.onclick=()=>load${ds.id.replace(/[^a-zA-Z0-9]/g,'_')}(page-1);nav.appendChild(b);}
+      const s=document.createElement('span');s.textContent='Page '+page;s.style.cssText='padding:8px;color:#666;';nav.appendChild(s);
+      if(items.length>=(pag.perPage||10)){const b=document.createElement('button');b.textContent='Next';b.style.cssText='padding:8px 16px;background:var(--c-primary,#7c3aed);color:white;border:none;border-radius:6px;cursor:pointer;';b.onclick=()=>load${ds.id.replace(/[^a-zA-Z0-9]/g,'_')}(page+1);nav.appendChild(b);}
+      container.appendChild(nav);
+      ` : ''}
+    }catch(e){container.innerHTML='<div style="text-align:center;padding:20px;color:#c00;">Error: '+e.message+'</div>';}
+  }
+  load${ds.id.replace(/[^a-zA-Z0-9]/g,'_')}();
+  ${ds.interval ? `setInterval(()=>load${ds.id.replace(/[^a-zA-Z0-9]/g,'_')}(),${ds.interval * 1000});` : ''}
+})();
+`;
+    }
+
+    // Form Actions
+    for (const fa of this.formActions) {
+      const headers = Object.keys(fa.headers).length ? JSON.stringify(fa.headers) : "{'Content-Type':'application/json'}";
+      js += `
+(function(){
+  const form=document.querySelector(${JSON.stringify(fa.formSelector)});
+  if(!form)return;
+  form.addEventListener('submit',async function(e){
+    e.preventDefault();
+    const data={};
+    new FormData(form).forEach((v,k)=>data[k]=v);
+    const btn=form.querySelector('button[type=submit]');
+    const origText=btn?btn.textContent:'';
+    if(btn){btn.textContent='Sending...';btn.disabled=true;}
+    try{
+      const res=await fetch(${JSON.stringify(fa.webhookUrl)},{method:${JSON.stringify(fa.method)},headers:${headers},body:JSON.stringify(data)});
+      if(res.ok){
+        ${fa.redirectUrl ? `window.location.href=${JSON.stringify(fa.redirectUrl)};` : `
+        const msg=document.createElement('div');
+        msg.textContent=${JSON.stringify(fa.successMessage)};
+        msg.style.cssText='padding:12px;background:#d1fae5;color:#065f46;border-radius:8px;margin-top:12px;text-align:center;';
+        form.appendChild(msg);
+        setTimeout(()=>msg.remove(),5000);
+        ${fa.resetOnSuccess ? 'form.reset();' : ''}
+        `}
+      }else{throw new Error('Server returned '+res.status);}
+    }catch(err){
+      const msg=document.createElement('div');
+      msg.textContent=${JSON.stringify(fa.errorMessage)};
+      msg.style.cssText='padding:12px;background:#fee2e2;color:#991b1b;border-radius:8px;margin-top:12px;text-align:center;';
+      form.appendChild(msg);
+      setTimeout(()=>msg.remove(),5000);
+    }finally{if(btn){btn.textContent=origText;btn.disabled=false;}}
+  });
+})();
+`;
+    }
+
+    return `<script>\n${js}\n</script>`;
   }
 
   getPageInfo() {
@@ -259,6 +475,8 @@ ${body}
       sectionCount: this.sections.length,
       cssRuleCount: this.cssRules.length,
       hasTheme: !!this.theme,
+      dataSourceCount: this.dataSources.length,
+      formActionCount: this.formActions.length,
     }};
   }
 
@@ -287,6 +505,12 @@ ${body}
       clearPage: () => this.clearPage(),
       setTheme: () => this.setTheme(params),
       getTheme: () => this.getTheme(),
+      addDataSource: () => this.addDataSource(params),
+      removeDataSource: () => this.removeDataSource(params.id),
+      getDataSources: () => this.getDataSources(),
+      addFormAction: () => this.addFormAction(params),
+      removeFormAction: () => this.removeFormAction(params.id),
+      getFormActions: () => this.getFormActions(),
       addSection: () => this.addSection(params.type, params.options || params),
       addHTML: () => this.addHTML(params.html),
       addCSSRule: () => this.addCSSRule(params.selector, params.styles),
