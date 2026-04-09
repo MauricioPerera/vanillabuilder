@@ -1,296 +1,302 @@
 # VanillaBuilder
 
-A **zero-dependency** web builder framework built entirely with **vanilla ES6+ JavaScript**. Cleanroom reimplementation of GrapesJS architecture without Backbone.js, jQuery, Underscore, or any runtime dependency.
+A **zero-dependency** visual web page builder with an **AI-friendly API**. Built entirely with **vanilla ES6+ JavaScript**. Deploy on Cloudflare Pages — any agent or human can build pages via HTTP requests or the visual editor.
 
-![Tests](https://img.shields.io/badge/tests-822%20passing-brightgreen)
+**Live demo**: [vanillabuilder.pages.dev](https://vanillabuilder.pages.dev)
+
+![Tests](https://img.shields.io/badge/tests-863+-brightgreen)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-blue)
-![Size](https://img.shields.io/badge/source-~13K%20lines-orange)
+![API Methods](https://img.shields.io/badge/API_methods-19-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## Why VanillaBuilder?
+## What is VanillaBuilder?
 
-| Legacy Stack (GrapesJS) | Modern Stack (VanillaBuilder) |
-|---|---|
-| Backbone.js Models | `ReactiveModel` (Proxy + EventEmitter) |
-| Backbone.js Collections | `ReactiveCollection` (reactive arrays) |
-| Backbone.js Views | `ComponentView` (native DOM API) |
-| Backbone.js Events | Custom `EventEmitter` |
-| Underscore.js | Native ES6+ methods |
-| jQuery / cash-dom | `querySelector`, `classList`, etc. |
-| backbone-undo | Custom `UndoManager` |
-| SCSS + Webpack | Pure CSS + Rollup |
+A visual page builder that works two ways:
 
-**Result**: Zero dependencies, smaller bundle, modern JavaScript, same powerful architecture.
+1. **Visual Editor** — Humans drag blocks, edit text, pick colors in a browser UI
+2. **HTTP API** — AI agents build pages with `curl` / `fetch` requests
+
+Both work on the same page simultaneously. Changes sync in real-time via Cloudflare KV.
 
 ## Quick Start
 
-### Browser (ESM)
-
-```html
-<script type="module">
-  import vanillabuilder from './src/index.js';
-
-  const editor = vanillabuilder.init({
-    container: '#editor',
-    components: '<div>Hello World</div>',
-  });
-</script>
-```
-
-### npm
+### For Agents (API)
 
 ```bash
-npm install vanillabuilder
+# Create a session
+curl -X POST https://vanillabuilder.pages.dev/api/session \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"my-page"}'
+
+# Build a page
+curl -X POST https://vanillabuilder.pages.dev/api/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "my-page",
+    "actions": [
+      {"method":"setTheme","params":{"colors":{"primary":"#059669"}}},
+      {"method":"addSection","params":{"type":"hero","options":{"headline":"Hello World","buttonText":"Click Me"}}},
+      {"method":"addSection","params":{"type":"features","options":{"heading":"Why Us","items":[{"icon":"⚡","title":"Fast","description":"Zero deps"}]}}},
+      {"method":"addSection","params":{"type":"footer"}},
+      {"method":"getFullPage","params":{"title":"My Page"}}
+    ]
+  }'
+
+# Open in browser to see the result
+open "https://vanillabuilder.pages.dev/?sessionId=my-page"
 ```
 
-```js
-import vanillabuilder from 'vanillabuilder';
+### For Humans (Editor)
 
-const editor = vanillabuilder.init({
-  container: '#editor',
-  components: '<h1>Hello World</h1>',
-  style: '.my-class { color: red; }',
-});
+Open [vanillabuilder.pages.dev](https://vanillabuilder.pages.dev) and:
+
+- **Drag blocks** from the left panel to the canvas
+- **Double-click text** to edit inline
+- **Double-click icons** to open the icon picker
+- **Double-click images** to change the URL
+- **Click elements** to edit styles in the right panel
+- **Theme tab** to set global colors, fonts, spacing
+- **Data tab** to connect APIs and form webhooks
+- **Session button** to get the share link
+
+### CLI
+
+```bash
+# Zero dependencies — uses Node.js built-ins only
+node cli.cjs new                                    # Create session
+node cli.cjs add hero '{"headline":"Hello"}'        # Add section
+node cli.cjs theme '{"colors":{"primary":"#dc2626"}}' # Set theme
+node cli.cjs info                                   # Show stats
+node cli.cjs open                                   # Open editor in browser
+node cli.cjs export page.html                       # Save to file
 ```
 
 ## Features
 
-- **Drag & Drop Editor** - Visual page builder with block palette
-- **21 Modules** - Full-featured modular architecture
-- **20+ Component Types** - Text, Image, Video, Link, Table, SVG, Form elements, and more
-- **Style Manager** - Visual CSS property editor with 6 sectors and 50+ properties
-- **Plugin System** - Extensible with custom plugins
-- **Multi-page Support** - Multiple pages per project
-- **Responsive Design** - Device presets (Desktop, Tablet, Mobile)
-- **Undo/Redo** - Full history management
-- **Storage** - LocalStorage and Remote HTTP backends
-- **Code Export** - Generate clean HTML, CSS, and JavaScript
-- **i18n** - Internationalization support
-- **Keyboard Shortcuts** - Configurable keymaps
-- **Data Sources** - Dynamic data binding
+### Visual Editor
+- **30 blocks** across 5 categories (Basic, Media, Layout, Forms, Sections)
+- **Drag & drop** with position indicator
+- **Inline editing** — double-click text, icons, images
+- **Style panel** — Dimension, Typography, Decorations, Layout, Flexbox
+- **Theme panel** — Global colors, fonts, sizes, spacing, border radius
+- **Data panel** — Connect external APIs and form webhooks
+- **Responsive preview** — Desktop, Tablet, Mobile
+- **Collapsible sidebars** — Maximize canvas space
+- **Session management** — Share link, reset session
 
-## Architecture
+### AI API
+- **19 methods** available via HTTP
+- **Stateful sessions** — persisted in Cloudflare KV, isolated per user
+- **Bidirectional sync** — agent and human edit the same page in real-time
+- **Changelog** — tracks who made each change (agent or editor)
+- **Tool schemas** — ready for AI function calling (Anthropic, OpenAI, generic)
 
-```
-src/
-  core/               # Reactive foundation (EventEmitter, ReactiveModel, ReactiveCollection)
-  editor/             # Editor API, EditorModel, EditorView, config
-  dom_components/     # Component system (20+ types, views, manager)
-  canvas/             # iframe-based canvas with zoom/pan
-  css_composer/       # CSS rule management
-  selector_manager/   # CSS selector/class management
-  style_manager/      # Visual CSS property editor (7 property types, 6 sectors)
-  block_manager/      # Draggable block palette
-  asset_manager/      # Media/image management
-  trait_manager/      # Component attribute editor
-  commands/           # Command pattern with 7+ built-in commands
-  panels/             # UI panel layout system
-  storage_manager/    # Pluggable persistence (LocalStorage, Remote)
-  parser/             # HTML/CSS string parser
-  code_manager/       # HTML/CSS/JS code generator
-  rich_text_editor/   # Inline text editing (contentEditable)
-  pages/              # Multi-page support
-  device_manager/     # Responsive device presets
-  data_sources/       # Dynamic data binding
-  i18n/               # Internationalization
-  keymaps/            # Keyboard shortcuts
-  undo_manager/       # Undo/redo history
-  navigator/          # Layer tree panel
-  modal/              # Modal dialog system
-  styles/             # Editor CSS (pure CSS custom properties)
-```
+### Design System / Theme
+- Define once, apply everywhere
+- Colors (12 tokens), fonts, sizes, spacing, border radius, max width
+- All sections use CSS custom properties
+- Change theme → entire page updates instantly
 
-## API
+### Data Sources & Form Actions
+- **Connect any REST API** — fetch data client-side, no backend
+- **Dot notation** for nested data: `response.data.items`, `{{user.address.city}}`
+- **Pagination** — configurable per-page, page param, limit param
+- **Auto-refresh** — poll APIs on interval
+- **Form webhooks** — POST to Zapier, Make, n8n, or any URL on submit
+- **Success/error messages** — configurable per form
+- **Redirect on success** — optional
 
-### Editor
+## API Reference
 
-```js
-const editor = vanillabuilder.init({
-  container: '#editor',
-  autorender: true,
-  components: '<div>Hello</div>',
-  style: 'div { color: red; }',
-  plugins: [myPlugin],
-  pluginsOpts: { myPlugin: { option: true } },
-});
+### Endpoints
 
-// Content
-editor.getHtml();
-editor.getCss();
-editor.getJs();
-editor.getProjectData();
-editor.loadProjectData(data);
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/health` | Service status |
+| `GET` | `/api/schemas` | Tool definitions (`?format=anthropic\|openai\|generic`) |
+| `POST` | `/api/session` | Create session `{"sessionId":"xxx"}` |
+| `GET` | `/api/session` | Check session exists `?sessionId=xxx` |
+| `DELETE` | `/api/session` | Delete session `?sessionId=xxx` |
+| `POST` | `/api/execute` | Execute single method |
+| `POST` | `/api/batch` | Execute multiple methods |
+| `GET` | `/api/poll` | Get current page state `?sessionId=xxx` |
+| `POST` | `/api/sync` | Editor pushes changes to API |
+| `GET` | `/api/changelog` | View change history `?sessionId=xxx` |
 
-// Selection
-editor.select(component);
-editor.getSelected();
-editor.getSelectedAll();
+### API Methods (19)
 
-// Commands
-editor.runCommand('preview');
-editor.stopCommand('preview');
+**Theme:**
+- `setTheme` — Set colors, fonts, sizes, spacing, borderRadius, maxWidth
+- `getTheme` — Get current theme
 
-// Storage
-await editor.store();
-await editor.load();
+**Content:**
+- `clearPage` — Remove all content
+- `addSection` — Add pre-built section (hero, features, cta, testimonials, pricing, footer, contact, faq, navbar, stats)
+- `addHTML` — Add raw HTML
+- `removeSection` — Remove section by index
 
-// Events
-editor.on('component:selected', (component) => { ... });
-editor.on('component:update:style', (component) => { ... });
+**CSS:**
+- `addCSSRule` — Add CSS rule with selector and styles
+- `removeSection` — Remove by index
 
-// Lifecycle
-editor.onReady(() => console.log('Ready!'));
-editor.destroy();
-```
+**Data:**
+- `addDataSource` — Connect external API with template and dot notation path
+- `removeDataSource` — Remove data source
+- `getDataSources` — List data sources
+- `addFormAction` — Add webhook to form submit
+- `removeFormAction` — Remove form action
+- `getFormActions` — List form actions
 
-### Module Access
+**Export:**
+- `getHTML` — Get page body HTML
+- `getCSS` — Get CSS rules
+- `getFullPage` — Get complete HTML document with theme, scripts, and styles
 
-```js
-editor.Components   // Component manager
-editor.Canvas       // Canvas module
-editor.Css          // CSS composer
-editor.Blocks       // Block manager
-editor.Assets       // Asset manager
-editor.Styles       // Style manager
-editor.Panels       // Panel manager
-editor.Commands     // Command system
-editor.Selectors    // Selector manager
-editor.Traits       // Trait manager
-editor.Devices      // Device manager
-editor.Pages        // Page manager
-editor.Storage      // Storage manager
-editor.Modal        // Modal dialogs
-editor.Keymaps      // Keyboard shortcuts
-editor.UndoManager  // Undo/redo
-editor.I18n         // Internationalization
-editor.Layers       // Layer tree
-editor.DataSources  // Data binding
-editor.RichTextEditor // Inline text editor
+**Query:**
+- `getPageInfo` — Section count, CSS rules, theme status, data sources, form actions
+- `getAvailableSections` — List 10 section types with descriptions
+
+**Generator:**
+- `buildLandingPage` — Generate complete landing page from config object
+
+### Tool Definitions for AI
+
+```bash
+# Anthropic format
+curl https://vanillabuilder.pages.dev/api/schemas?format=anthropic
+
+# OpenAI format
+curl https://vanillabuilder.pages.dev/api/schemas?format=openai
 ```
 
-### Plugins
+### Example: Agent Builds a SaaS Landing Page
 
-```js
-// Define a plugin
-function myPlugin(editor, options) {
-  editor.Blocks.add({ id: 'my-block', label: 'My Block', content: '<div>Custom</div>' });
-  editor.Commands.add('my-command', { run: (editor) => { ... } });
-  editor.Components.addType('my-type', { model: MyModel, view: MyView });
-}
-
-// Use it
-vanillabuilder.init({
-  plugins: [myPlugin],
-  pluginsOpts: { myPlugin: { color: 'red' } },
-});
-
-// Or with usePlugin helper
-const configured = vanillabuilder.usePlugin(myPlugin, { color: 'blue' });
-vanillabuilder.init({ plugins: [configured] });
+```bash
+curl -X POST https://vanillabuilder.pages.dev/api/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "my-saas",
+    "actions": [
+      {"method":"setTheme","params":{"colors":{"primary":"#4f46e5"},"fonts":{"heading":"Georgia, serif"}}},
+      {"method":"clearPage"},
+      {"method":"addSection","params":{"type":"navbar","options":{"brand":"CloudSync","ctaText":"Try Free"}}},
+      {"method":"addSection","params":{"type":"hero","options":{"headline":"Sync Everything","subheadline":"Keep your team in sync.","buttonText":"Start Free"}}},
+      {"method":"addSection","params":{"type":"features","options":{"heading":"Why Us","items":[{"icon":"⚡","title":"Fast","description":"Real-time sync"},{"icon":"🔒","title":"Secure","description":"E2E encrypted"}]}}},
+      {"method":"addSection","params":{"type":"pricing","options":{"heading":"Plans","plans":[{"name":"Free","price":"$0","features":["1 Project"]},{"name":"Pro","price":"$19","features":["Unlimited","Support"],"popular":true}]}}},
+      {"method":"addSection","params":{"type":"footer","options":{"copyright":"2026 CloudSync"}}},
+      {"method":"getFullPage","params":{"title":"CloudSync"}}
+    ]
+  }'
 ```
 
-### Custom Component Types
+### Example: Connect an API and Form Webhook
 
-```js
-editor.Components.addType('my-component', {
-  isComponent: (el) => el.tagName === 'MY-TAG',
-  model: {
-    defaults: { tagName: 'div', type: 'my-component', traits: ['id', 'title'] }
-  },
-});
+```bash
+curl -X POST https://vanillabuilder.pages.dev/api/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "my-page",
+    "actions": [
+      {"method":"addHTML","params":{"html":"<div id=\"posts\"></div>"}},
+      {"method":"addDataSource","params":{
+        "id":"blog",
+        "url":"https://my-cms.com/api/posts",
+        "path":"data.posts",
+        "targetSelector":"#posts",
+        "template":"<article><h3>{{title}}</h3><p>{{excerpt}}</p><small>{{author.name}}</small></article>",
+        "pagination":{"perPage":10}
+      }},
+      {"method":"addSection","params":{"type":"contact","options":{"heading":"Contact"}}},
+      {"method":"addFormAction","params":{
+        "id":"contact",
+        "formSelector":"form",
+        "webhookUrl":"https://hooks.zapier.com/xxx",
+        "successMessage":"Thanks!"
+      }}
+    ]
+  }'
 ```
 
-## Configuration
+## Collaborative Editing
 
-```js
-vanillabuilder.init({
-  // Core
-  container: '#editor',           // Mount point
-  autorender: true,               // Auto-render on init
-  headless: false,                // No UI mode
-  stylePrefix: 'vb-',            // CSS class prefix
-  height: '900px',
-  width: '100%',
+Multiple users/agents can edit the same page:
 
-  // Content
-  projectData: null,              // Full project JSON
-  components: '',                 // Initial HTML
-  style: '',                      // Initial CSS
+1. User opens editor, gets a `sessionId`
+2. User shares the session link with an agent
+3. Agent makes API calls with that `sessionId`
+4. Editor auto-updates via polling (every 2 seconds)
+5. Human edits sync back to API via MutationObserver
+6. Changelog tracks who changed what
 
-  // Plugins
-  plugins: [],
-  pluginsOpts: {},
+Reset session = new `sessionId` = old collaborators lose access.
 
-  // Behavior
-  multipleSelection: true,
-  nativeDnD: true,
-  avoidInlineStyle: false,
-  showToolbar: true,
+## Deploy Your Own
 
-  // Module configs
-  storageManager: { type: 'local' },
-  deviceManager: {},
-  blockManager: {},
-  styleManager: {},
-  // ... all 21 modules configurable
-});
+```bash
+# Clone
+git clone https://github.com/MauricioPerera/vanillabuilder.git
+cd vanillabuilder
+
+# Create Cloudflare KV namespace
+npx wrangler kv namespace create VANILLABUILDER_SESSIONS
+# Update wrangler.toml with the namespace ID
+
+# Deploy
+npx wrangler pages deploy public --project-name my-builder
 ```
 
 ## Development
 
 ```bash
-# Install dev dependencies
-npm install
+npm install           # Install dev dependencies
+npm test              # Run 863+ tests
+npm run test:watch    # Watch mode
 
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Build distribution
-npm run build
-
-# Start dev server
+# Local dev
 npx http-server . -p 8080 --cors -c-1
-# Then open http://localhost:8080/examples/basic.html
+open http://localhost:8080/examples/basic.html
 ```
 
-## Testing
-
-822 tests across 28 test files covering all modules:
+## Architecture
 
 ```
-npm test
+public/
+  index.html            # Visual editor (single file, self-contained)
 
- Test Files  28 passed (28)
-      Tests  822 passed (822)
+functions/api/          # Cloudflare Pages Functions (serverless API)
+  _builder.js           # PageBuilder: templates, theme, data sources, form actions
+  _db.js                # Session & changelog storage (Cloudflare KV)
+  execute.js            # POST /api/execute
+  batch.js              # POST /api/batch
+  poll.js               # GET /api/poll
+  sync.js               # POST /api/sync (editor → API)
+  session.js            # Session CRUD
+  changelog.js          # GET /api/changelog
+  health.js             # GET /api/health
+  schemas.js            # GET /api/schemas (AI tool definitions)
+
+src/                    # Core framework (21 modules, 80+ files)
+  core/                 # EventEmitter, ReactiveModel, ReactiveCollection
+  editor/               # Editor API
+  dom_components/       # Component system (20+ types)
+  style_manager/        # CSS property editor
+  ...
+
+cli.cjs                 # Zero-dep CLI (Node.js built-ins only)
+test/                   # 863+ tests (Vitest)
 ```
 
-Test coverage includes:
-- **Core**: EventEmitter, ReactiveModel, ReactiveCollection, utilities
-- **Editor**: Constructor, module initialization, config, lifecycle, events
-- **Components**: 20+ types, component tree, styles, classes, traits, HTML generation
-- **Views**: DOM rendering, attribute sync, status updates, cleanup
-- **CSS**: Rules, selectors, media queries, persistence
-- **Style Manager**: 7 property types, sectors, PropertyFactory, view rendering
-- **All Modules**: Blocks, Assets, Traits, Commands, Storage, Parser, CodeManager, I18n, Keymaps, UndoManager, Devices, Pages, DataSources, Modal, Navigator
-- **Integration**: Full editor init, plugins, selection flow
-
-## Project Stats
+## Stats
 
 | Metric | Value |
 |--------|-------|
-| Source files | 80+ JS, 2 CSS |
-| Lines of code | ~13,000 |
-| Test files | 28 |
-| Test cases | 822 |
 | Runtime dependencies | **0** |
-| Modules | 21 |
-| Component types | 20+ |
-| Built-in commands | 7+ |
-| CSS property sectors | 6 |
-| CSS properties | 50+ |
+| API methods | **19** |
+| Section templates | **10** |
+| Block types | **30** |
+| Test cases | **863+** |
+| Framework modules | **21** |
+| Component types | **20+** |
 
 ## License
 
