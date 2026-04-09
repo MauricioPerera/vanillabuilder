@@ -1,60 +1,105 @@
 /**
- * Session & changelog storage using Cloudflare KV
+ * Session & changelog storage using js-doc-store + Cloudflare KV
  *
- * Optimized with versioning:
- *   vb_session_{id} → { sections, cssRules, theme, ... }  (heavy, read only when needed)
- *   vb_ver_{id}     → number                               (tiny, read on every poll)
- *   vb_log_{id}     → [ entries... ]                        (changelog)
+ * Collections:
+ *   sessions  → { sessionId, data: { sections, cssRules, theme, ... }, createdAt }
+ *   changelog → { sessionId, source, action, summary, timestamp }
  *
- * Poll reads only the version (1 cheap KV read).
- * If version changed, reads the full session (1 more read).
- * If version same, returns cached/empty — 0 extra reads.
+ * Versioning: vb_ver_{id} → timestamp (cheap poll check)
+ *
+ * Preload files:
+ *   sessions.docs.json, sessions.meta.json
+ *   changelog.docs.json, changelog.meta.json
  */
 
-const PREFIX = 'vb_session_';
+import { DocStore, CloudflareKVAdapter } from './js-doc-store.js';
+
 const VER_PREFIX = 'vb_ver_';
-const LOG_PREFIX = 'vb_log_';
-const TTL = 86400; // 24h
+const TTL = 86400;
+
+const PRELOAD_FILES = [
+  'sessions.docs.json', 'sessions.meta.json',
+  'changelog.docs.json', 'changelog.meta.json',
+];
+
+// ── Get DB instance (call once per request) ──
+
+export async function getDB(env) {
+  const adapter = new CloudflareKVAdapter(env.SESSIONS, 'vb_');
+  await adapter.preload(PRELOAD_FILES);
+  const db = new DocStore(adapter);
+
+  // Create index on sessionId for fast lookups
+  const sessions = db.collection('sessions');
+  try { sessions.createIndex('sessionId', { unique: true }); } catch {}
+
+  const changelog = db.collection('changelog');
+  try { changelog.createIndex('sessionId'); } catch {}
+
+  return { db, adapter, sessions, changelog };
+}
+
+export async function flushDB(db, adapter) {
+  db.flush();
+  await adapter.persist();
+}
 
 // ── Session CRUD ──
 
 export async function loadSession(env, sessionId) {
-  const raw = await env.SESSIONS.get(PREFIX + sessionId, 'json');
-  return raw || null;
+  const { sessions } = await getDB(env);
+  const doc = sessions.findOne({ sessionId });
+  return doc?.data || null;
 }
 
 export async function saveSession(env, sessionId, data) {
-  // Increment version on every save
-  const ver = Date.now();
-  await Promise.all([
-    env.SESSIONS.put(PREFIX + sessionId, JSON.stringify(data), { expirationTtl: TTL }),
-    env.SESSIONS.put(VER_PREFIX + sessionId, String(ver), { expirationTtl: TTL }),
-  ]);
+  const { db, adapter, sessions } = await getDB(env);
+  const existing = sessions.findOne({ sessionId });
+  if (existing) {
+    sessions.update({ sessionId }, { $set: { data, updatedAt: Date.now() } });
+  } else {
+    sessions.insert({ sessionId, data, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+  await flushDB(db, adapter);
+
+  // Update version
+  const ver = String(Date.now());
+  await env.SESSIONS.put(VER_PREFIX + sessionId, ver, { expirationTtl: TTL });
   return ver;
 }
 
 export async function sessionExists(env, sessionId) {
-  const raw = await env.SESSIONS.get(PREFIX + sessionId);
-  return raw !== null;
+  // Use version key as source of truth (faster and survives KV eventual consistency)
+  const ver = await env.SESSIONS.get(VER_PREFIX + sessionId);
+  return ver !== null;
 }
 
 export async function createSession(env, sessionId) {
-  await Promise.all([
-    env.SESSIONS.put(PREFIX + sessionId, JSON.stringify({ sections: [], cssRules: [], createdAt: Date.now() }), { expirationTtl: TTL }),
-    env.SESSIONS.put(VER_PREFIX + sessionId, '0', { expirationTtl: TTL }),
-    env.SESSIONS.put(LOG_PREFIX + sessionId, JSON.stringify([]), { expirationTtl: TTL }),
-  ]);
+  const { db, adapter, sessions } = await getDB(env);
+  const existing = sessions.findOne({ sessionId });
+  if (!existing) {
+    sessions.insert({ sessionId, data: { sections: [], cssRules: [] }, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+  await flushDB(db, adapter);
+  await env.SESSIONS.put(VER_PREFIX + sessionId, '0', { expirationTtl: TTL });
 }
 
 export async function deleteSession(env, sessionId) {
-  await Promise.all([
-    env.SESSIONS.delete(PREFIX + sessionId),
-    env.SESSIONS.delete(VER_PREFIX + sessionId),
-    env.SESSIONS.delete(LOG_PREFIX + sessionId),
-  ]);
+  const { db, adapter, sessions, changelog } = await getDB(env);
+
+  // Remove session
+  const docs = sessions.find({ sessionId }).toArray();
+  for (const doc of docs) sessions.remove(doc._id);
+
+  // Remove changelog entries
+  const logs = changelog.find({ sessionId }).toArray();
+  for (const log of logs) changelog.remove(log._id);
+
+  await flushDB(db, adapter);
+  await env.SESSIONS.delete(VER_PREFIX + sessionId);
 }
 
-// ── Version (cheap check for poll) ──
+// ── Version ──
 
 export async function getVersion(env, sessionId) {
   const raw = await env.SESSIONS.get(VER_PREFIX + sessionId);
@@ -64,18 +109,28 @@ export async function getVersion(env, sessionId) {
 // ── Changelog ──
 
 export async function addLogEntry(env, sessionId, entry) {
-  const raw = await env.SESSIONS.get(LOG_PREFIX + sessionId, 'json');
-  const log = Array.isArray(raw) ? raw : [];
-  log.push({
+  const { db, adapter, changelog } = await getDB(env);
+  changelog.insert({
+    sessionId,
     ...entry,
     timestamp: Date.now(),
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
   });
-  if (log.length > 100) log.splice(0, log.length - 100);
-  await env.SESSIONS.put(LOG_PREFIX + sessionId, JSON.stringify(log), { expirationTtl: TTL });
+
+  // Keep max 100 per session
+  const all = changelog.find({ sessionId }).sort({ timestamp: -1 }).toArray();
+  if (all.length > 100) {
+    for (const old of all.slice(100)) changelog.remove(old._id);
+  }
+
+  await flushDB(db, adapter);
 }
 
 export async function getChangelog(env, sessionId) {
-  const raw = await env.SESSIONS.get(LOG_PREFIX + sessionId, 'json');
-  return Array.isArray(raw) ? raw : [];
+  const { changelog } = await getDB(env);
+  return changelog.find({ sessionId }).sort({ timestamp: 1 }).toArray().map(doc => ({
+    source: doc.source,
+    action: doc.action,
+    summary: doc.summary,
+    timestamp: doc.timestamp,
+  }));
 }

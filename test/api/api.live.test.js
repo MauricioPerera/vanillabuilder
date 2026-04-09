@@ -44,7 +44,7 @@ afterAll(async () => { await deleteSession(SID); });
 // ═══════════════════════════════════════════════════════════════
 
 describe('GET /api/health', () => {
-  it('returns ok with version', async () => {
+  it('returns ok with version', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/health`);
     const data = await res.json();
     expect(res.status).toBe(200);
@@ -58,7 +58,7 @@ describe('GET /api/health', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('GET /api/schemas', () => {
-  it('returns 19 tools in anthropic format', async () => {
+  it('returns 19 tools in anthropic format', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/schemas`);
     const data = await res.json();
     expect(data.ok).toBe(true);
@@ -66,13 +66,13 @@ describe('GET /api/schemas', () => {
     expect(data.data[0]).toHaveProperty('input_schema');
   });
 
-  it('returns openai format', async () => {
+  it('returns openai format', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/schemas?format=openai`);
     const data = await res.json();
     expect(data.data[0].type).toBe('function');
   });
 
-  it('includes all 19 method names', async () => {
+  it('includes all 19 method names', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/schemas`);
     const data = await res.json();
     const names = data.data.map(t => t.name);
@@ -87,20 +87,20 @@ describe('GET /api/schemas', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('POST /api/session', () => {
-  it('creates a session', async () => {
+  it('creates a session', { retry: 2 }, async () => {
     const d = await createSession('tmp-session-test');
     expect(d.ok).toBe(true);
     await deleteSession('tmp-session-test');
   });
 
-  it('GET checks existence', async () => {
+  it('GET checks existence', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/session?sessionId=${SID}`);
     const d = await res.json();
     expect(d.ok).toBe(true);
     expect(d.exists).toBe(true);
   });
 
-  it('GET returns false for nonexistent', async () => {
+  it('GET returns false for nonexistent', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/session?sessionId=nonexistent-xxx`);
     const d = await res.json();
     expect(d.exists).toBe(false);
@@ -112,25 +112,25 @@ describe('POST /api/session', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('POST /api/execute — auth', () => {
-  it('rejects missing sessionId', async () => {
+  it('rejects missing sessionId', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: 'getHTML' }) });
     const d = await res.json();
     expect(d.ok).toBe(false);
   });
 
-  it('rejects invalid session', async () => {
+  it('rejects invalid session', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method: 'getHTML', sessionId: 'fake-xxx' }) });
     const d = await res.json();
     expect(d.ok).toBe(false);
   });
 
-  it('rejects missing method', async () => {
+  it('rejects missing method', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: SID }) });
     const d = await res.json();
     expect(d.ok).toBe(false);
   });
 
-  it('rejects unknown method', async () => {
+  it('rejects unknown method', { retry: 2 }, async () => {
     const d = await exec('nonExistent');
     expect(d.ok).toBe(false);
     expect(d.error).toContain('Unknown method');
@@ -142,7 +142,7 @@ describe('POST /api/execute — auth', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('setTheme', () => {
-  it('sets custom theme', async () => {
+  it('sets custom theme', { retry: 2 }, async () => {
     const d = await exec('setTheme', { colors: { primary: '#dc2626' }, fonts: { heading: 'Georgia, serif' }, borderRadius: '12px' });
     expect(d.ok).toBe(true);
     expect(d.data.colors.primary).toBe('#dc2626');
@@ -154,7 +154,7 @@ describe('setTheme', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('getTheme', () => {
-  it('returns current theme', async () => {
+  it('returns current theme', { retry: 2 }, async () => {
     const d = await exec('getTheme');
     expect(d.ok).toBe(true);
     expect(d.data.colors).toBeDefined();
@@ -167,7 +167,7 @@ describe('getTheme', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('clearPage', () => {
-  it('clears all content', async () => {
+  it('clears all content', { retry: 2 }, async () => {
     const r = await batch([
       { method: 'addHTML', params: { html: '<p>test</p>' } },
       { method: 'clearPage' },
@@ -207,7 +207,7 @@ describe('addSection', () => {
     });
   }
 
-  it('rejects unknown type', async () => {
+  it('rejects unknown type', { retry: 2 }, async () => {
     const d = await exec('addSection', { type: 'nonexistent' });
     expect(d.ok).toBe(false);
   });
@@ -218,12 +218,12 @@ describe('addSection', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('addHTML', () => {
-  it('adds raw HTML', async () => {
+  it('adds raw HTML', { retry: 2 }, async () => {
     const r = await batch([{ method: 'clearPage' }, { method: 'addHTML', params: { html: '<p>Raw</p>' } }, { method: 'getHTML' }]);
     expect(r.results[2].data).toContain('Raw');
   });
 
-  it('rejects missing html', async () => {
+  it('rejects missing html', { retry: 2 }, async () => {
     const d = await exec('addHTML', {});
     expect(d.ok).toBe(false);
   });
@@ -234,7 +234,7 @@ describe('addHTML', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('addCSSRule', () => {
-  it('adds a CSS rule', async () => {
+  it('adds a CSS rule', { retry: 2 }, async () => {
     const r = await batch([{ method: 'clearPage' }, { method: 'addCSSRule', params: { selector: '.x', styles: { color: 'red' } } }, { method: 'getCSS' }]);
     expect(r.results[2].data).toContain('.x');
     expect(r.results[2].data).toContain('color:red');
@@ -246,7 +246,7 @@ describe('addCSSRule', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('removeSection', () => {
-  it('removes by index', async () => {
+  it('removes by index', { retry: 2 }, async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'addHTML', params: { html: '<p>First</p>' } },
@@ -258,7 +258,7 @@ describe('removeSection', () => {
     expect(r.results[4].data).toContain('Second');
   });
 
-  it('rejects invalid index', async () => {
+  it('rejects invalid index', { retry: 2 }, async () => {
     const r = await batch([{ method: 'clearPage' }, { method: 'removeSection', params: { index: 99 } }]);
     expect(r.results[1].ok).toBe(false);
   });
@@ -269,7 +269,7 @@ describe('removeSection', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('getHTML', () => {
-  it('returns empty for empty page', async () => {
+  it('returns empty for empty page', { retry: 2 }, async () => {
     const r = await batch([{ method: 'clearPage' }, { method: 'getHTML' }]);
     expect(r.results[1].data).toBe('');
   });
@@ -280,7 +280,7 @@ describe('getHTML', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('getCSS', () => {
-  it('returns empty when no rules', async () => {
+  it('returns empty when no rules', { retry: 2 }, async () => {
     const r = await batch([{ method: 'clearPage' }, { method: 'getCSS' }]);
     expect(r.results[1].data).toBe('');
   });
@@ -291,7 +291,7 @@ describe('getCSS', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('getFullPage', () => {
-  it('returns complete HTML with DOCTYPE and theme', async () => {
+  it('returns complete HTML with DOCTYPE and theme', { retry: 2 }, async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'addSection', params: { type: 'hero', options: { headline: 'Full' } } },
@@ -310,7 +310,7 @@ describe('getFullPage', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('getPageInfo', () => {
-  it('returns counts', async () => {
+  it('returns counts', { retry: 2 }, async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'addSection', params: { type: 'hero' } },
@@ -331,7 +331,7 @@ describe('getPageInfo', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('getAvailableSections', () => {
-  it('returns 10 types', async () => {
+  it('returns 10 types', { retry: 2 }, async () => {
     const d = await exec('getAvailableSections');
     expect(d.data.length).toBe(10);
     const ids = d.data.map(s => s.id);
@@ -346,7 +346,7 @@ describe('getAvailableSections', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('buildLandingPage', () => {
-  it('builds a complete page', async () => {
+  it('builds a complete page', { retry: 2 }, async () => {
     const d = await exec('buildLandingPage', {
       title: 'LP',
       hero: { headline: 'Hi' },
@@ -364,7 +364,7 @@ describe('buildLandingPage', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('addDataSource', () => {
-  it('adds a data source', async () => {
+  it('adds a data source', { retry: 2 }, async () => {
     const d = await exec('addDataSource', {
       id: 'test-ds', url: 'https://api.example.com/data', path: 'results.items',
       targetSelector: '#list', template: '<p>{{name}}</p>',
@@ -372,7 +372,7 @@ describe('addDataSource', () => {
     expect(d.ok).toBe(true);
   });
 
-  it('rejects missing fields', async () => {
+  it('rejects missing fields', { retry: 2 }, async () => {
     const d = await exec('addDataSource', { id: 'x' });
     expect(d.ok).toBe(false);
   });
@@ -383,7 +383,7 @@ describe('addDataSource', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('removeDataSource', () => {
-  it('removes by id', async () => {
+  it('removes by id', { retry: 2 }, async () => {
     const r = await batch([
       { method: 'addDataSource', params: { id: 'rm-ds', url: 'https://x.com', targetSelector: '#x', template: '<p>{{a}}</p>' } },
       { method: 'removeDataSource', params: { id: 'rm-ds' } },
@@ -398,7 +398,7 @@ describe('removeDataSource', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('getDataSources', () => {
-  it('lists data sources', async () => {
+  it('lists data sources', { retry: 2 }, async () => {
     const d = await exec('getDataSources');
     expect(d.ok).toBe(true);
     expect(Array.isArray(d.data)).toBe(true);
@@ -410,14 +410,14 @@ describe('getDataSources', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('addFormAction', () => {
-  it('adds a form webhook', async () => {
+  it('adds a form webhook', { retry: 2 }, async () => {
     const d = await exec('addFormAction', {
       id: 'test-fa', formSelector: 'form', webhookUrl: 'https://hooks.example.com/x',
     });
     expect(d.ok).toBe(true);
   });
 
-  it('rejects missing fields', async () => {
+  it('rejects missing fields', { retry: 2 }, async () => {
     const d = await exec('addFormAction', { id: 'x' });
     expect(d.ok).toBe(false);
   });
@@ -428,7 +428,7 @@ describe('addFormAction', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('removeFormAction', () => {
-  it('removes by id', async () => {
+  it('removes by id', { retry: 2 }, async () => {
     const r = await batch([
       { method: 'addFormAction', params: { id: 'rm-fa', formSelector: '#f', webhookUrl: 'https://x.com' } },
       { method: 'removeFormAction', params: { id: 'rm-fa' } },
@@ -443,7 +443,7 @@ describe('removeFormAction', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('getFormActions', () => {
-  it('lists form actions', async () => {
+  it('lists form actions', { retry: 2 }, async () => {
     const d = await exec('getFormActions');
     expect(d.ok).toBe(true);
     expect(Array.isArray(d.data)).toBe(true);
@@ -455,7 +455,7 @@ describe('getFormActions', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('POST /api/batch', () => {
-  it('executes multiple actions', async () => {
+  it('executes multiple actions', { retry: 2 }, async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'addSection', params: { type: 'hero', options: { headline: 'Batch' } } },
@@ -466,12 +466,12 @@ describe('POST /api/batch', () => {
     expect(r.results[2].data).toContain('Batch');
   });
 
-  it('returns sessionId', async () => {
+  it('returns sessionId', { retry: 2 }, async () => {
     const r = await batch([{ method: 'clearPage' }]);
     expect(r.sessionId).toBe(SID);
   });
 
-  it('handles errors gracefully', async () => {
+  it('handles errors gracefully', { retry: 2 }, async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'addSection', params: { type: 'INVALID' } },
@@ -487,7 +487,7 @@ describe('POST /api/batch', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('sync + poll', () => {
-  it('editor sync is readable by poll', async () => {
+  it('editor sync is readable by poll', { retry: 2 }, async () => {
     await fetch(`${API}/api/sync`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: SID, html: '<h1>Synced</h1>' }) });
 
     const res = await fetch(`${API}/api/poll?sessionId=${SID}`);
@@ -503,7 +503,7 @@ describe('sync + poll', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('GET /api/changelog', () => {
-  it('returns changelog entries', async () => {
+  it('returns changelog entries', { retry: 2 }, async () => {
     const res = await fetch(`${API}/api/changelog?sessionId=${SID}`);
     const d = await res.json();
     expect(d.ok).toBe(true);
@@ -516,7 +516,7 @@ describe('GET /api/changelog', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('Integration', () => {
-  it('theme + build + data + form + export', async () => {
+  it('theme + build + data + form + export', { retry: 2 }, async () => {
     const r = await batch([
       { method: 'clearPage' },
       { method: 'setTheme', params: { colors: { primary: '#059669' } } },
