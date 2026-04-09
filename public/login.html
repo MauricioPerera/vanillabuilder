@@ -83,7 +83,7 @@
         const data = await res.json();
 
         if (data.ok) {
-          window.location.href = '/';
+          window.location.href = '/dashboard.html';
         } else {
           err.textContent = data.error || 'Something went wrong';
         }

@@ -3,1659 +3,237 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VanillaBuilder - Editor Demo</title>
+  <title>VanillaBuilder — Visual Page Builder with AI API</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f0f1a;color:#cdd6f4}
+    a{color:inherit;text-decoration:none}
 
-    /* ── App Shell ── */
-    .app { display: flex; flex-direction: column; height: 100vh; background: #1a1a2e; color: #cdd6f4; }
+    /* Nav */
+    nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;max-width:1200px;margin:0 auto}
+    nav .brand{font-size:20px;font-weight:700;color:#a78bfa}
+    nav .links{display:flex;gap:24px;align-items:center}
+    nav .links a{font-size:14px;color:#6c7086;transition:color .15s}
+    nav .links a:hover{color:#cdd6f4}
+    .cta-btn{padding:8px 20px;background:#7c3aed;color:#fff;border-radius:6px;font-size:14px;font-weight:600;border:none;cursor:pointer;display:inline-block}
+    .cta-btn:hover{background:#6d28d9}
+    .cta-btn--outline{background:transparent;border:1px solid #3a3a5a;color:#cdd6f4}
+    .cta-btn--outline:hover{border-color:#7c3aed;color:#a78bfa}
+    .cta-btn--lg{padding:14px 32px;font-size:16px;border-radius:8px}
 
-    /* ── Top Bar ── */
-    .topbar {
-      display: flex; align-items: center; justify-content: space-between;
-      height: 48px; padding: 0 16px;
-      background: #16162a; border-bottom: 1px solid #2a2a4a;
-    }
-    .topbar__brand { font-weight: 700; font-size: 15px; color: #a78bfa; letter-spacing: -0.5px; }
-    .topbar__actions { display: flex; gap: 8px; }
-    .topbar__btn {
-      padding: 6px 14px; border: 1px solid #3a3a5a; border-radius: 6px;
-      background: transparent; color: #cdd6f4; font-size: 13px; cursor: pointer;
-      transition: all .15s;
-    }
-    .topbar__btn:hover { background: #2a2a4a; }
-    .topbar__btn--primary { background: #7c3aed; border-color: #7c3aed; color: #fff; }
-    .topbar__btn--primary:hover { background: #6d28d9; }
-    .topbar__devices { display: flex; gap: 4px; }
-    .topbar__device {
-      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-      border: 1px solid transparent; border-radius: 6px; background: transparent;
-      color: #6c7086; cursor: pointer; font-size: 18px;
-    }
-    .topbar__device:hover { color: #cdd6f4; background: #2a2a4a; }
-    .topbar__device.active { color: #a78bfa; border-color: #a78bfa; }
+    /* Hero */
+    .hero{text-align:center;padding:80px 24px 60px;max-width:800px;margin:0 auto}
+    .hero h1{font-size:52px;font-weight:800;line-height:1.1;margin-bottom:20px;background:linear-gradient(135deg,#a78bfa,#7c3aed,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero p{font-size:20px;color:#6c7086;line-height:1.6;margin-bottom:32px}
+    .hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 
-    /* ── Main Layout ── */
-    .main { display: flex; flex: 1; overflow: hidden; }
+    /* Features */
+    .features{padding:80px 24px;max-width:1000px;margin:0 auto}
+    .features h2{text-align:center;font-size:32px;margin-bottom:48px}
+    .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+    .feature-card{padding:28px;background:#1e1e36;border:1px solid #2a2a4a;border-radius:12px}
+    .feature-card .icon{font-size:28px;margin-bottom:12px}
+    .feature-card h3{font-size:18px;margin-bottom:8px;color:#cdd6f4}
+    .feature-card p{font-size:14px;color:#6c7086;line-height:1.6}
 
-    /* ── Collapse Toggles (in topbar) ── */
-    .topbar__toggle {
-      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-      border: 1px solid #3a3a5a; border-radius: 6px; background: transparent;
-      color: #6c7086; cursor: pointer; font-size: 16px; transition: all .15s;
-    }
-    .topbar__toggle:hover { color: #cdd6f4; background: #2a2a4a; }
-    .topbar__toggle.active { color: #a78bfa; border-color: #7c3aed; background: #7c3aed22; }
+    /* How it works */
+    .how{padding:80px 24px;max-width:900px;margin:0 auto;text-align:center}
+    .how h2{font-size:32px;margin-bottom:48px}
+    .steps{display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+    .step{flex:1;min-width:220px;max-width:280px;text-align:center}
+    .step .num{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:#7c3aed;color:white;border-radius:50%;font-weight:700;margin:0 auto 16px}
+    .step h3{font-size:16px;margin-bottom:8px}
+    .step p{font-size:13px;color:#6c7086;line-height:1.6}
 
-    /* ── Left Sidebar (Blocks) ── */
-    .sidebar-left {
-      width: 240px; min-width: 240px;
-      background: #1e1e36; border-right: 1px solid #2a2a4a;
-      overflow-y: auto; display: flex; flex-direction: column;
-      position: relative; transition: width .25s ease, min-width .25s ease, padding .25s ease, opacity .25s ease;
-    }
-    .sidebar-left.collapsed { width: 0; min-width: 0; overflow: hidden; opacity: 0; border-right: none; padding: 0; }
-    .sidebar__title {
-      padding: 12px 16px; font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 1px; color: #6c7086;
-      border-bottom: 1px solid #2a2a4a;
-    }
-    .sidebar__tab-bar { display: flex; border-bottom: 1px solid #2a2a4a; }
-    .sidebar__tab {
-      flex: 1; padding: 10px; text-align: center; font-size: 12px;
-      background: transparent; border: none; color: #6c7086; cursor: pointer;
-      border-bottom: 2px solid transparent;
-    }
-    .sidebar__tab:hover { color: #cdd6f4; }
-    .sidebar__tab.active { color: #a78bfa; border-bottom-color: #a78bfa; }
-    .sidebar__content { flex: 1; overflow-y: auto; padding: 8px; }
+    /* Code block */
+    .code-section{padding:60px 24px;max-width:700px;margin:0 auto}
+    .code-section h2{text-align:center;font-size:28px;margin-bottom:24px}
+    .code-block{background:#1a1a2e;border:1px solid #2a2a4a;border-radius:12px;padding:24px;font-family:'Fira Code',monospace;font-size:13px;color:#89b4fa;overflow-x:auto;line-height:1.7}
+    .code-block .comment{color:#6c7086}
+    .code-block .string{color:#a6e3a1}
 
-    /* Blocks Grid */
-    .blocks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .block-item {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 14px 8px; background: #252542; border: 1px solid #2a2a4a;
-      border-radius: 8px; cursor: grab; transition: all .15s; gap: 6px;
-    }
-    .block-item:hover { background: #2d2d50; border-color: #7c3aed; }
-    .block-item:active { transform: scale(0.96); }
-    .block-item--active { border-color: #7c3aed !important; background: #7c3aed22 !important; box-shadow: 0 0 0 2px #7c3aed44; }
-    .block-item__icon { color: #a78bfa; }
-    .block-item__icon svg { width: 24px; height: 24px; }
-    .block-item__label { font-size: 11px; color: #9ca3af; }
-    .block-category { font-size: 11px; font-weight: 600; color: #6c7086; padding: 8px 4px 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    /* Pricing */
+    .pricing{padding:80px 24px;max-width:800px;margin:0 auto;text-align:center}
+    .pricing h2{font-size:32px;margin-bottom:12px}
+    .pricing .subtitle{color:#6c7086;margin-bottom:40px;font-size:16px}
+    .pricing-cards{display:flex;gap:24px;justify-content:center;flex-wrap:wrap}
+    .pricing-card{flex:1;min-width:260px;max-width:340px;padding:32px;background:#1e1e36;border:1px solid #2a2a4a;border-radius:12px;text-align:left}
+    .pricing-card.popular{border-color:#7c3aed;position:relative}
+    .pricing-card .badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#7c3aed;color:white;padding:4px 16px;border-radius:12px;font-size:12px;font-weight:600}
+    .pricing-card h3{font-size:20px;margin-bottom:4px}
+    .pricing-card .price{font-size:40px;font-weight:800;margin:12px 0}
+    .pricing-card .price span{font-size:16px;color:#6c7086;font-weight:400}
+    .pricing-card ul{list-style:none;margin:16px 0 24px}
+    .pricing-card li{padding:6px 0;font-size:14px;color:#9ca3af}
+    .pricing-card li::before{content:'✓ ';color:#a6e3a1}
 
-    /* Layers */
-    .layers-tree { padding: 8px; }
-    .layer-item {
-      display: flex; align-items: center; gap: 6px; padding: 6px 8px;
-      border-radius: 4px; cursor: pointer; font-size: 12px; color: #9ca3af;
-    }
-    .layer-item:hover { background: #252542; color: #cdd6f4; }
-    .layer-item.selected { background: #7c3aed22; color: #a78bfa; }
-    .layer-item__tag { font-size: 10px; color: #6c7086; font-family: monospace; }
-    .layer-item__indent { display: inline-block; }
+    /* CTA */
+    .final-cta{padding:80px 24px;text-align:center;background:linear-gradient(135deg,#1e1e36,#16162a)}
+    .final-cta h2{font-size:32px;margin-bottom:12px}
+    .final-cta p{color:#6c7086;margin-bottom:24px;font-size:16px}
 
-    /* ── Canvas ── */
-    .canvas-area {
-      flex: 1; display: flex; align-items: center; justify-content: center;
-      background: #12121f; overflow: auto; position: relative;
-    }
-    .canvas-frame {
-      background: #fff; border-radius: 4px; box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-      width: 100%; max-width: 1200px; min-height: 600px;
-      overflow: auto; transition: max-width .3s ease;
-    }
-    .canvas-frame.tablet { max-width: 768px; }
-    .canvas-frame.mobile { max-width: 375px; }
-
-    /* Canvas iframe */
-    .canvas-frame iframe {
-      width: 100%; min-height: 600px; border: none; display: block;
-    }
-
-    /* ── Right Sidebar (Styles/Traits) ── */
-    .sidebar-right {
-      width: 280px; min-width: 280px;
-      background: #1e1e36; border-left: 1px solid #2a2a4a;
-      overflow-y: auto; display: flex; flex-direction: column;
-      position: relative; transition: width .25s ease, min-width .25s ease, opacity .25s ease;
-    }
-    .sidebar-right.collapsed { width: 0; min-width: 0; overflow: hidden; opacity: 0; border-left: none; padding: 0;
-    }
-
-    /* Selected component info */
-    .selected-info {
-      padding: 12px 16px; border-bottom: 1px solid #2a2a4a;
-      font-size: 12px; display: flex; align-items: center; gap: 8px;
-    }
-    .selected-info__tag { font-family: monospace; color: #a78bfa; font-weight: 600; }
-    .selected-info__name { color: #6c7086; }
-    .selected-info--empty { color: #4a4a6a; font-style: italic; }
-
-    /* Style sectors */
-    .sm-sector { border-bottom: 1px solid #2a2a4a; }
-    .sm-sector__title {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 16px; cursor: pointer; user-select: none;
-      font-size: 12px; font-weight: 600; color: #cdd6f4;
-      transition: background .15s;
-    }
-    .sm-sector__title:hover { background: #252542; }
-    .sm-sector__arrow { font-size: 10px; color: #6c7086; width: 12px; }
-    .sm-sector__props { padding: 8px 16px 12px; display: grid; gap: 8px; }
-    .sm-sector__props.closed { display: none; }
-
-    /* Property rows */
-    .sm-prop { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; }
-    .sm-prop--full { grid-template-columns: 1fr; }
-    .sm-prop__label { font-size: 11px; color: #6c7086; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sm-prop__input {
-      height: 30px; padding: 4px 8px; background: #252542; border: 1px solid #2a2a4a;
-      border-radius: 4px; color: #cdd6f4; font-size: 12px; outline: none; width: 100%;
-    }
-    .sm-prop__input:focus { border-color: #7c3aed; }
-    .sm-prop__input--select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236c7086'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; padding-right: 24px; }
-
-    /* Number with unit */
-    .sm-number { display: flex; gap: 2px; }
-    .sm-number input[type="number"] { flex: 1; min-width: 0; }
-    .sm-number select { width: 50px; padding: 4px 2px; font-size: 10px; }
-
-    /* Color input */
-    .sm-color { display: flex; gap: 4px; }
-    .sm-color input[type="color"] { width: 30px; height: 30px; padding: 2px; border: 1px solid #2a2a4a; border-radius: 4px; background: #252542; cursor: pointer; }
-    .sm-color input[type="text"] { flex: 1; min-width: 0; }
-
-    /* Radio group */
-    .sm-radio { display: flex; gap: 2px; }
-    .sm-radio label { flex: 1; text-align: center; padding: 6px; background: #252542; border: 1px solid #2a2a4a; cursor: pointer; font-size: 11px; color: #6c7086; transition: all .15s; }
-    .sm-radio label:first-child { border-radius: 4px 0 0 4px; }
-    .sm-radio label:last-child { border-radius: 0 4px 4px 0; }
-    .sm-radio label:hover { color: #cdd6f4; }
-    .sm-radio input:checked + span { color: #a78bfa; }
-    .sm-radio input { display: none; }
-
-    /* Slider */
-    .sm-slider { display: flex; align-items: center; gap: 8px; }
-    .sm-slider input[type="range"] { flex: 1; accent-color: #7c3aed; }
-    .sm-slider__val { font-size: 11px; color: #6c7086; min-width: 32px; text-align: right; }
-
-    /* Composite (margin/padding) */
-    .sm-composite { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-    .sm-composite--four { grid-template-columns: 1fr 1fr 1fr 1fr; }
-
-    /* Trait inputs */
-    .trait-row { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 8px; padding: 4px 0; }
-    .trait-row__label { font-size: 11px; color: #6c7086; }
-
-    /* Notification toast */
-    .toast {
-      position: fixed; bottom: 20px; right: 20px; padding: 12px 20px;
-      background: #7c3aed; color: #fff; border-radius: 8px; font-size: 13px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 9999;
-      animation: slideUp .3s ease;
-    }
-    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } }
-
-    /* Preview mode */
-    .preview-mode .sidebar-left,
-    .preview-mode .sidebar-right,
-    .preview-mode .topbar { display: none; }
-    .preview-mode .canvas-frame { max-width: 100%; border-radius: 0; box-shadow: none; }
+    /* Footer */
+    footer{padding:32px 24px;text-align:center;color:#4a4a6a;font-size:13px;border-top:1px solid #2a2a4a}
   </style>
 </head>
 <body>
-  <div class="app" id="app">
-    <!-- Top Bar -->
-    <div class="topbar">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div class="topbar__brand">VanillaBuilder</div>
-        <button class="topbar__toggle active" id="toggle-left" title="Toggle Blocks panel">&#9776;</button>
+
+  <nav>
+    <div class="brand">VanillaBuilder</div>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://github.com/MauricioPerera/vanillabuilder" target="_blank">GitHub</a>
+      <a href="/dashboard.html" class="cta-btn--outline cta-btn">Dashboard</a>
+      <a href="/editor.html" class="cta-btn">Open Editor</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <h1>Build Pages with AI<br/>Edit Visually</h1>
+    <p>The visual page builder where AI agents and humans collaborate in real-time. No backend needed. Export and deploy anywhere.</p>
+    <div class="hero-btns">
+      <a href="/editor.html" class="cta-btn cta-btn--lg">Open Editor</a>
+      <a href="/dashboard.html" class="cta-btn cta-btn--lg cta-btn--outline">My Pages</a>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <h2>Everything you need</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="icon">&#129302;</div>
+        <h3>AI API</h3>
+        <p>20 HTTP methods. Any agent can build pages with curl. Tool schemas for Claude and OpenAI function calling.</p>
       </div>
-      <div class="topbar__devices">
-        <button class="topbar__device active" data-device="desktop" title="Desktop"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h18v10z"/></svg></button>
-        <button class="topbar__device" data-device="tablet" title="Tablet"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M18.5 0h-14C3.12 0 2 1.12 2 2.5v19C2 22.88 3.12 24 4.5 24h14c1.38 0 2.5-1.12 2.5-2.5v-19C21 1.12 19.88 0 18.5 0zm-7 23c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm7.5-4H4V3h15v16z"/></svg></button>
-        <button class="topbar__device" data-device="mobile" title="Mobile"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M15.5 1h-8C6.12 1 5 2.12 5 3.5v17C5 21.88 6.12 23 7.5 23h8c1.38 0 2.5-1.12 2.5-2.5v-17C18 2.12 16.88 1 15.5 1zm-4 21c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4.5-4H7V4h9v14z"/></svg></button>
+      <div class="feature-card">
+        <div class="icon">&#127912;</div>
+        <h3>Visual Editor</h3>
+        <p>Drag & drop 30 blocks. Edit text inline. Pick icons. Responsive preview. Dark theme.</p>
       </div>
-      <div class="topbar__actions">
-        <button class="topbar__btn" id="btn-session" title="Session info">&#128279; Session</button>
-        <button class="topbar__btn" id="btn-account" title="Account">&#128100; Account</button>
-        <button class="topbar__btn" id="btn-preview">Preview</button>
-        <button class="topbar__btn" id="btn-code">View Code</button>
-        <button class="topbar__btn" id="btn-export">Export</button>
-        <button class="topbar__btn topbar__btn--primary" id="btn-save">Save</button>
-        <button class="topbar__toggle active" id="toggle-right" title="Toggle Styles panel">&#9998;</button>
+      <div class="feature-card">
+        <div class="icon">&#127912;</div>
+        <h3>Design System</h3>
+        <p>Set colors, fonts, spacing once. Every section respects the theme. Change it and the whole page updates.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128640;</div>
+        <h3>Real-time Collaboration</h3>
+        <p>Agent and human edit the same page simultaneously. Changes sync via polling. Changelog tracks who changed what.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128279;</div>
+        <h3>Data Sources</h3>
+        <p>Connect any REST API. Dot notation for nested data. Pagination built-in. Auto-refresh.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128232;</div>
+        <h3>Form Webhooks</h3>
+        <p>Connect forms to Zapier, Make, n8n, or any endpoint. Success/error messages. No server needed.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128230;</div>
+        <h3>Export & Deploy</h3>
+        <p>Get clean HTML + CSS + JS files. Deploy on Vercel, Cloudflare, Netlify, GitHub Pages — anywhere.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128176;</div>
+        <h3>Zero Cost to Start</h3>
+        <p>Free tier: 3 pages, visual editor, AI API. Runs on Cloudflare free tier. Zero runtime dependencies.</p>
       </div>
     </div>
+  </section>
 
-    <!-- Main -->
-    <div class="main">
-      <!-- Left Sidebar -->
-      <div class="sidebar-left" id="sidebar-left">
-        <div class="sidebar__tab-bar">
-          <button class="sidebar__tab active" data-tab="blocks">Blocks</button>
-          <button class="sidebar__tab" data-tab="layers">Layers</button>
-        </div>
-        <div class="sidebar__content" id="panel-blocks"></div>
-        <div class="sidebar__content" id="panel-layers" style="display:none;"></div>
+  <section class="how" id="how">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h3>Create a page</h3>
+        <p>Open the editor or run <code>vb new</code> from the CLI. Get a unique session link.</p>
       </div>
-
-      <!-- Canvas -->
-      <div class="canvas-area">
-        <div class="canvas-frame" id="canvas-frame">
-          <iframe id="canvas-iframe" title="Editor Canvas"></iframe>
-        </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h3>Build with AI or by hand</h3>
+        <p>An agent sends HTTP requests to add sections. You drag blocks and edit text visually. Both at the same time.</p>
       </div>
-
-      <!-- Right Sidebar -->
-      <div class="sidebar-right" id="sidebar-right">
-        <div class="selected-info" id="selected-info">
-          <span class="selected-info--empty">Select a component</span>
-        </div>
-        <div class="sidebar__tab-bar">
-          <button class="sidebar__tab" data-rtab="theme">Theme</button>
-          <button class="sidebar__tab active" data-rtab="styles">Styles</button>
-          <button class="sidebar__tab" data-rtab="traits">Settings</button>
-          <button class="sidebar__tab" data-rtab="data">Data</button>
-        </div>
-        <div id="panel-theme" style="display:none; padding:12px; overflow-y:auto;"></div>
-        <div id="panel-styles"></div>
-        <div id="panel-traits" style="display:none;"></div>
-        <div id="panel-data" style="display:none; padding:12px; overflow-y:auto;"></div>
+      <div class="step">
+        <div class="num">3</div>
+        <h3>Connect data</h3>
+        <p>Plug in a CMS API, add form webhooks. Set your theme colors and fonts.</p>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <h3>Export & deploy</h3>
+        <p>Download clean HTML + CSS + JS. Push to any static host. Done.</p>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Code Modal -->
-  <div id="code-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; display:none; align-items:center; justify-content:center;">
-    <div style="background:#1e1e36; border-radius:12px; width:80%; max-width:900px; max-height:80vh; overflow:hidden; border:1px solid #2a2a4a;">
-      <div style="display:flex; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #2a2a4a;">
-        <strong style="color:#cdd6f4;">Generated Code</strong>
-        <button id="close-modal" style="background:none; border:none; color:#cdd6f4; font-size:20px; cursor:pointer;">&times;</button>
+  <section class="code-section">
+    <h2>Agent builds a page in one request</h2>
+    <div class="code-block">
+<span class="comment"># Create session</span>
+curl -X POST /api/session -d '{"sessionId":"demo"}'
+
+<span class="comment"># Build entire page</span>
+curl -X POST /api/batch -d '{
+  "sessionId": "demo",
+  "actions": [
+    {"method":"setTheme","params":{"colors":{"primary":"<span class="string">#059669</span>"}}},
+    {"method":"addSection","params":{"type":"hero","options":{"headline":"<span class="string">Hello World</span>"}}},
+    {"method":"addSection","params":{"type":"features","options":{"heading":"<span class="string">Why Us</span>"}}},
+    {"method":"addSection","params":{"type":"footer"}},
+    {"method":"exportProject","params":{"title":"<span class="string">My Site</span>"}}
+  ]
+}'
+    </div>
+  </section>
+
+  <section class="pricing" id="pricing">
+    <h2>Simple pricing</h2>
+    <p class="subtitle">Start free. Upgrade when you need more.</p>
+    <div class="pricing-cards">
+      <div class="pricing-card">
+        <h3>Free</h3>
+        <div class="price">$0<span>/forever</span></div>
+        <ul>
+          <li>3 pages</li>
+          <li>Visual editor</li>
+          <li>AI API (20 methods)</li>
+          <li>10 section templates</li>
+          <li>30 blocks</li>
+          <li>Theme system</li>
+        </ul>
+        <a href="/dashboard.html" class="cta-btn" style="display:block;text-align:center;">Get Started</a>
       </div>
-      <div style="display:flex; height:60vh;">
-        <div style="flex:1; border-right:1px solid #2a2a4a; overflow:auto;">
-          <div style="padding:8px 12px; font-size:11px; color:#6c7086; border-bottom:1px solid #2a2a4a;">HTML</div>
-          <pre id="code-html" style="padding:12px; font-size:12px; color:#89b4fa; white-space:pre-wrap; word-break:break-all;"></pre>
-        </div>
-        <div style="flex:1; overflow:auto;">
-          <div style="padding:8px 12px; font-size:11px; color:#6c7086; border-bottom:1px solid #2a2a4a;">CSS</div>
-          <pre id="code-css" style="padding:12px; font-size:12px; color:#a6e3a1; white-space:pre-wrap; word-break:break-all;"></pre>
-        </div>
+      <div class="pricing-card popular">
+        <div class="badge">Popular</div>
+        <h3>Pro</h3>
+        <div class="price">$9<span>/month</span></div>
+        <ul>
+          <li>Unlimited pages</li>
+          <li>Everything in Free</li>
+          <li>Data sources (API connections)</li>
+          <li>Form webhooks</li>
+          <li>Export HTML/CSS/JS</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="/dashboard.html" class="cta-btn" style="display:block;text-align:center;">Start Free, Upgrade Later</a>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Session Modal -->
-  <div id="session-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
-    <div style="background:#1e1e36; border-radius:12px; width:90%; max-width:500px; overflow:hidden; border:1px solid #2a2a4a;">
-      <div style="display:flex; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #2a2a4a;">
-        <strong style="color:#cdd6f4;">Session</strong>
-        <button id="close-session-modal" style="background:none; border:none; color:#cdd6f4; font-size:20px; cursor:pointer;">&times;</button>
-      </div>
-      <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
-        <div>
-          <div style="font-size:11px; color:#6c7086; text-transform:uppercase; margin-bottom:6px;">Your Session ID</div>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="session-id-display" readonly style="flex:1; padding:10px 12px; background:#252542; border:1px solid #3a3a5a; border-radius:6px; color:#a78bfa; font-family:monospace; font-size:13px; outline:none;"/>
-            <button id="btn-copy-session" style="padding:10px 16px; background:#252542; border:1px solid #3a3a5a; border-radius:6px; color:#cdd6f4; cursor:pointer; font-size:13px;">Copy</button>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:11px; color:#6c7086; text-transform:uppercase; margin-bottom:6px;">Share Link</div>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="session-link-display" readonly style="flex:1; padding:10px 12px; background:#252542; border:1px solid #3a3a5a; border-radius:6px; color:#89b4fa; font-size:12px; outline:none;"/>
-            <button id="btn-copy-link" style="padding:10px 16px; background:#252542; border:1px solid #3a3a5a; border-radius:6px; color:#cdd6f4; cursor:pointer; font-size:13px;">Copy</button>
-          </div>
-          <div style="font-size:11px; color:#6c7086; margin-top:6px;">Anyone with this link can view and edit this page collaboratively.</div>
-        </div>
-        <div style="border-top:1px solid #2a2a4a; padding-top:16px; display:flex; gap:8px;">
-          <button id="btn-reset-session" style="padding:10px 20px; background:#dc2626; border:none; border-radius:6px; color:white; font-size:13px; font-weight:600; cursor:pointer;">Reset Session</button>
-          <div style="font-size:11px; color:#6c7086; display:flex; align-items:center;">Creates a new session. Old link stops working.</div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <section class="final-cta">
+    <h2>Ready to build?</h2>
+    <p>No credit card required. Start building in seconds.</p>
+    <a href="/editor.html" class="cta-btn cta-btn--lg">Open Editor</a>
+  </section>
 
-  <script>
-    // ── Block definitions ──
-    const blocks = [
-      // ── Basic ──
-      { id: 'text', label: 'Text', category: 'Basic', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M5 4v3h5.5v12h3V7H19V4z"/></svg>', content: '<p style="padding:8px;">Insert your text here</p>' },
-      { id: 'heading', label: 'Heading', category: 'Basic', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M5 4h2v6h4V4h2v14h-2v-6H7v6H5V4z"/></svg>', content: '<h2 style="padding:8px;">Heading</h2>' },
-      { id: 'paragraph', label: 'Paragraph', category: 'Basic', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M13 4a4 4 0 0 1 0 8h-2v6H9V4h4zm0 6a2 2 0 1 0 0-4h-2v4h2z"/></svg>', content: '<p style="padding:8px; line-height:1.7; color:#444;">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>' },
-      { id: 'image', label: 'Image', category: 'Basic', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>', content: '<img src="https://placehold.co/350x200/e2e8f0/64748b?text=Image" style="max-width:100%; display:block;"/>' },
-      { id: 'link', label: 'Link', category: 'Basic', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>', content: '<a href="#" style="color:#7c3aed;">Link text</a>' },
-      { id: 'button', label: 'Button', category: 'Basic', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"/></svg>', content: '<a href="#" style="display:inline-block; padding:12px 28px; background:#7c3aed; color:#fff; border-radius:6px; text-decoration:none; font-weight:600; font-size:15px;">Button</a>' },
-      { id: 'divider', label: 'Divider', category: 'Basic', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2 12h20v2H2z"/></svg>', content: '<hr style="border:none; border-top:2px solid #e2e8f0; margin:16px 0;"/>' },
-      { id: 'spacer', label: 'Spacer', category: 'Basic', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M8 18h3v-2H8v2zm0-14v2h3V4H8zm6 14h3v-2h-3v2zm0-14v2h3V4h-3zM4 21h16c.55 0 1-.45 1-1s-.45-1-1-1H4c-.55 0-1 .45-1 1s.45 1 1 1zM4 3c-.55 0-1 .45-1 1s.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1H4z"/></svg>', content: '<div style="height:50px;"></div>' },
-      { id: 'list', label: 'List', category: 'Basic', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>', content: '<ul style="padding:8px 8px 8px 28px; line-height:1.8;"><li>List item one</li><li>List item two</li><li>List item three</li></ul>' },
+  <footer>
+    <p>&copy; 2026 VanillaBuilder. Open source on <a href="https://github.com/MauricioPerera/vanillabuilder" style="color:#6c7086;">GitHub</a>.</p>
+  </footer>
 
-      // ── Media ──
-      { id: 'video', label: 'Video', category: 'Media', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>', content: '<video controls style="width:100%; max-width:640px; display:block; border-radius:8px;"><source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">Your browser does not support video.</video>' },
-      { id: 'map', label: 'Map', category: 'Media', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>', content: '<iframe src="https://maps.google.com/maps?q=New+York&z=12&output=embed" style="width:100%; height:300px; border:none; border-radius:8px;" loading="lazy"></iframe>' },
-      { id: 'icon', label: 'Icon', category: 'Media', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>', content: '<span style="font-size:48px; display:inline-block;">&#9733;</span>' },
-      { id: 'embed', label: 'Embed', category: 'Media', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>', content: '<div style="padding:24px; background:#f1f3f5; border:2px dashed #dee2e6; border-radius:8px; text-align:center; color:#868e96; font-size:14px;">Paste your embed code here</div>' },
-
-      // ── Layout ──
-      { id: 'section', label: 'Section', category: 'Layout', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2zm16 14H5V5h14v14z"/></svg>', content: '<section style="padding:40px 20px; min-height:100px;"><p>Section content</p></section>' },
-      { id: 'container', label: 'Container', category: 'Layout', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>', content: '<div style="max-width:960px; margin:0 auto; padding:20px;"><p>Container content</p></div>' },
-      { id: 'cols2', label: '2 Columns', category: 'Layout', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3 3h8v18H3V3zm10 0h8v18h-8V3z"/></svg>', content: '<div style="display:flex; gap:16px; padding:16px;"><div style="flex:1; padding:16px; background:#f8f9fa; border-radius:4px; min-height:80px;">Column 1</div><div style="flex:1; padding:16px; background:#f8f9fa; border-radius:4px; min-height:80px;">Column 2</div></div>' },
-      { id: 'cols3', label: '3 Columns', category: 'Layout', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2 3h6v18H2V3zm7 0h6v18H9V3zm7 0h6v18h-6V3z"/></svg>', content: '<div style="display:flex; gap:16px; padding:16px;"><div style="flex:1; padding:16px; background:#f8f9fa; border-radius:4px; min-height:80px;">Col 1</div><div style="flex:1; padding:16px; background:#f8f9fa; border-radius:4px; min-height:80px;">Col 2</div><div style="flex:1; padding:16px; background:#f8f9fa; border-radius:4px; min-height:80px;">Col 3</div></div>' },
-      { id: 'cols4', label: '4 Columns', category: 'Layout', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2 3h4v18H2zm5 0h4v18H7zm5 0h4v18h-4zm5 0h4v18h-4z"/></svg>', content: '<div style="display:flex; gap:12px; padding:16px;"><div style="flex:1; padding:12px; background:#f8f9fa; border-radius:4px; min-height:60px;">Col 1</div><div style="flex:1; padding:12px; background:#f8f9fa; border-radius:4px; min-height:60px;">Col 2</div><div style="flex:1; padding:12px; background:#f8f9fa; border-radius:4px; min-height:60px;">Col 3</div><div style="flex:1; padding:12px; background:#f8f9fa; border-radius:4px; min-height:60px;">Col 4</div></div>' },
-      { id: 'sidebar-layout', label: 'Sidebar', category: 'Layout', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3 3h6v18H3V3zm8 0h10v18H11V3z"/></svg>', content: '<div style="display:flex; gap:16px; padding:16px;"><div style="width:250px; min-width:250px; padding:16px; background:#f8f9fa; border-radius:4px; min-height:200px;">Sidebar</div><div style="flex:1; padding:16px; background:#f8f9fa; border-radius:4px; min-height:200px;">Main Content</div></div>' },
-      { id: 'grid2x2', label: '2x2 Grid', category: 'Layout', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>', content: '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px;"><div style="padding:16px; background:#f8f9fa; border-radius:4px; min-height:80px;">Cell 1</div><div style="padding:16px; background:#f8f9fa; border-radius:4px; min-height:80px;">Cell 2</div><div style="padding:16px; background:#f8f9fa; border-radius:4px; min-height:80px;">Cell 3</div><div style="padding:16px; background:#f8f9fa; border-radius:4px; min-height:80px;">Cell 4</div></div>' },
-
-      // ── Forms ──
-      { id: 'form', label: 'Form', category: 'Forms', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>', content: '<form style="max-width:480px; padding:24px; background:#f8f9fa; border-radius:8px;"><div style="margin-bottom:16px;"><label style="display:block; font-size:14px; font-weight:500; margin-bottom:6px; color:#333;">Name</label><input type="text" placeholder="Your name" style="width:100%; padding:10px 12px; border:1px solid #dee2e6; border-radius:6px; font-size:14px;"/></div><div style="margin-bottom:16px;"><label style="display:block; font-size:14px; font-weight:500; margin-bottom:6px; color:#333;">Email</label><input type="email" placeholder="you@example.com" style="width:100%; padding:10px 12px; border:1px solid #dee2e6; border-radius:6px; font-size:14px;"/></div><div style="margin-bottom:16px;"><label style="display:block; font-size:14px; font-weight:500; margin-bottom:6px; color:#333;">Message</label><textarea rows="4" placeholder="Your message" style="width:100%; padding:10px 12px; border:1px solid #dee2e6; border-radius:6px; font-size:14px; resize:vertical;"></textarea></div><button type="submit" style="padding:10px 24px; background:#7c3aed; color:#fff; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer;">Send Message</button></form>' },
-      { id: 'input', label: 'Input', category: 'Forms', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M21 3.01H3c-1.1 0-2 .9-2 2V9h2V4.99h18v14.03H3V15H1v4.01c0 1.1.9 1.98 2 1.98h18c1.1 0 2-.88 2-1.98v-14c0-1.11-.9-2-2-2zM1 11v2h8v3l4-4-4-4v3H1z"/></svg>', content: '<input type="text" placeholder="Enter text..." style="width:100%; max-width:400px; padding:10px 12px; border:1px solid #dee2e6; border-radius:6px; font-size:14px;"/>' },
-      { id: 'textarea', label: 'Textarea', category: 'Forms', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm0 15.17L18.83 16H4V4h16v13.17z"/></svg>', content: '<textarea rows="4" placeholder="Enter text..." style="width:100%; max-width:400px; padding:10px 12px; border:1px solid #dee2e6; border-radius:6px; font-size:14px; resize:vertical;"></textarea>' },
-      { id: 'select', label: 'Select', category: 'Forms', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3 17h18v2H3v-2zm0-7h18v2H3v-2zm0-7h18v2H3V3z"/></svg>', content: '<select style="width:100%; max-width:400px; padding:10px 12px; border:1px solid #dee2e6; border-radius:6px; font-size:14px; background:#fff;"><option>Option 1</option><option>Option 2</option><option>Option 3</option></select>' },
-      { id: 'checkbox', label: 'Checkbox', category: 'Forms', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM17.99 9l-1.41-1.42-6.59 6.59-2.58-2.57-1.42 1.41 4 3.99z"/></svg>', content: '<label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; color:#333;"><input type="checkbox" style="width:18px; height:18px; accent-color:#7c3aed;"/> I agree to the terms</label>' },
-      { id: 'submit-btn', label: 'Submit Btn', category: 'Forms', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>', content: '<button type="submit" style="padding:12px 32px; background:#7c3aed; color:#fff; border:none; border-radius:6px; font-size:15px; font-weight:600; cursor:pointer; transition:background .2s;">Submit</button>' },
-
-      // ── Pre-built Sections ──
-      { id: 'hero', label: 'Hero', category: 'Sections', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M1 5h2v14H1V5zm4 0h2v14H5V5zm17 0H8v14h14V5zm-2 12H10V7h10v10z"/></svg>', content: '<section style="padding:80px 20px; text-align:center; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white;"><h1 style="font-size:48px; font-weight:800; margin-bottom:16px;">Your Hero Title</h1><p style="font-size:20px; opacity:0.9; max-width:600px; margin:0 auto 32px;">A brief description of your product or service goes here.</p><a href="#" style="display:inline-block; padding:14px 36px; background:white; color:#764ba2; border-radius:8px; text-decoration:none; font-weight:700; font-size:16px;">Get Started</a></section>' },
-      { id: 'features', label: 'Features', category: 'Sections', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>', content: '<section style="padding:60px 20px; max-width:960px; margin:0 auto;"><h2 style="text-align:center; font-size:32px; margin-bottom:40px; color:#333;">Features</h2><div style="display:flex; gap:24px; flex-wrap:wrap;"><div style="flex:1; min-width:250px; padding:24px; background:#f8f9fa; border-radius:8px; text-align:center;"><div style="font-size:36px; margin-bottom:12px;">&#9889;</div><h3 style="margin-bottom:8px; color:#333;">Feature One</h3><p style="color:#666; font-size:14px;">Description of your amazing feature goes here.</p></div><div style="flex:1; min-width:250px; padding:24px; background:#f8f9fa; border-radius:8px; text-align:center;"><div style="font-size:36px; margin-bottom:12px;">&#128640;</div><h3 style="margin-bottom:8px; color:#333;">Feature Two</h3><p style="color:#666; font-size:14px;">Description of your amazing feature goes here.</p></div><div style="flex:1; min-width:250px; padding:24px; background:#f8f9fa; border-radius:8px; text-align:center;"><div style="font-size:36px; margin-bottom:12px;">&#128161;</div><h3 style="margin-bottom:8px; color:#333;">Feature Three</h3><p style="color:#666; font-size:14px;">Description of your amazing feature goes here.</p></div></div></section>' },
-      { id: 'cta', label: 'CTA', category: 'Sections', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg>', content: '<section style="padding:60px 20px; background:#7c3aed; text-align:center; color:white;"><h2 style="font-size:36px; font-weight:700; margin-bottom:16px;">Ready to get started?</h2><p style="font-size:18px; opacity:0.9; margin-bottom:28px;">Join thousands of happy customers today.</p><a href="#" style="display:inline-block; padding:14px 36px; background:white; color:#7c3aed; border-radius:8px; text-decoration:none; font-weight:700; font-size:16px;">Sign Up Free</a></section>' },
-      { id: 'testimonial', label: 'Testimonial', category: 'Sections', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/></svg>', content: '<section style="padding:60px 20px; max-width:700px; margin:0 auto; text-align:center;"><div style="font-size:48px; color:#7c3aed; line-height:1;">&#8220;</div><p style="font-size:20px; font-style:italic; color:#444; line-height:1.6; margin-bottom:24px;">This product completely changed how we work. The team loves it and our productivity has skyrocketed.</p><div style="display:flex; align-items:center; justify-content:center; gap:12px;"><img src="https://placehold.co/48x48/e2e8f0/64748b?text=JD" style="width:48px; height:48px; border-radius:50%;"/><div style="text-align:left;"><strong style="color:#333;">Jane Doe</strong><br/><span style="font-size:13px; color:#888;">CEO, Company Inc.</span></div></div></section>' },
-      { id: 'pricing', label: 'Pricing', category: 'Sections', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>', content: '<section style="padding:60px 20px; background:#f8f9fa;"><h2 style="text-align:center; font-size:32px; margin-bottom:40px; color:#333;">Pricing</h2><div style="display:flex; gap:24px; justify-content:center; flex-wrap:wrap; max-width:960px; margin:0 auto;"><div style="flex:1; min-width:260px; max-width:300px; padding:32px; background:white; border-radius:12px; text-align:center; border:1px solid #e2e8f0;"><h3 style="font-size:20px; color:#333; margin-bottom:8px;">Starter</h3><div style="font-size:42px; font-weight:800; color:#333; margin:16px 0;">$9<span style="font-size:16px; color:#888; font-weight:400;">/mo</span></div><ul style="list-style:none; padding:0; margin:0 0 24px; text-align:left;"><li style="padding:8px 0; border-bottom:1px solid #f1f3f5; color:#555;">&#10003; 5 Projects</li><li style="padding:8px 0; border-bottom:1px solid #f1f3f5; color:#555;">&#10003; Basic Support</li><li style="padding:8px 0; color:#555;">&#10003; 1 GB Storage</li></ul><a href="#" style="display:block; padding:12px; background:#7c3aed; color:white; border-radius:6px; text-decoration:none; font-weight:600;">Choose Plan</a></div><div style="flex:1; min-width:260px; max-width:300px; padding:32px; background:white; border-radius:12px; text-align:center; border:2px solid #7c3aed; position:relative;"><div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#7c3aed; color:white; padding:4px 16px; border-radius:12px; font-size:12px; font-weight:600;">Popular</div><h3 style="font-size:20px; color:#333; margin-bottom:8px;">Pro</h3><div style="font-size:42px; font-weight:800; color:#333; margin:16px 0;">$29<span style="font-size:16px; color:#888; font-weight:400;">/mo</span></div><ul style="list-style:none; padding:0; margin:0 0 24px; text-align:left;"><li style="padding:8px 0; border-bottom:1px solid #f1f3f5; color:#555;">&#10003; Unlimited Projects</li><li style="padding:8px 0; border-bottom:1px solid #f1f3f5; color:#555;">&#10003; Priority Support</li><li style="padding:8px 0; color:#555;">&#10003; 50 GB Storage</li></ul><a href="#" style="display:block; padding:12px; background:#7c3aed; color:white; border-radius:6px; text-decoration:none; font-weight:600;">Choose Plan</a></div></div></section>' },
-      { id: 'footer', label: 'Footer', category: 'Sections', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 19H5V5h14v14zM5 3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5zm7 10H6v2h6v-2zm0 4H6v2h6v-2z"/></svg>', content: '<footer style="padding:40px 20px; background:#1a1a2e; color:#cdd6f4;"><div style="display:flex; gap:40px; flex-wrap:wrap; max-width:960px; margin:0 auto 32px;"><div style="flex:1; min-width:200px;"><h4 style="font-size:16px; margin-bottom:12px; color:white;">Company</h4><p style="font-size:14px; color:#6c7086; line-height:1.8;">Building the future, one block at a time.</p></div><div style="flex:1; min-width:150px;"><h4 style="font-size:16px; margin-bottom:12px; color:white;">Links</h4><div style="display:flex; flex-direction:column; gap:8px;"><a href="#" style="color:#6c7086; text-decoration:none; font-size:14px;">Home</a><a href="#" style="color:#6c7086; text-decoration:none; font-size:14px;">About</a><a href="#" style="color:#6c7086; text-decoration:none; font-size:14px;">Contact</a></div></div><div style="flex:1; min-width:150px;"><h4 style="font-size:16px; margin-bottom:12px; color:white;">Legal</h4><div style="display:flex; flex-direction:column; gap:8px;"><a href="#" style="color:#6c7086; text-decoration:none; font-size:14px;">Privacy</a><a href="#" style="color:#6c7086; text-decoration:none; font-size:14px;">Terms</a></div></div></div><div style="border-top:1px solid #2a2a4a; padding-top:20px; text-align:center; font-size:13px; color:#4a4a6a;">&copy; 2026 Company. All rights reserved.</div></footer>' },
-    ];
-
-    // ── Initial Content ──
-    const initialHTML = `
-      <section style="padding:60px 20px; text-align:center; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white;">
-        <h1 style="font-size:42px; margin-bottom:16px; font-weight:700;">Welcome to VanillaBuilder</h1>
-        <p style="font-size:18px; opacity:0.9; max-width:600px; margin:0 auto 24px;">A zero-dependency web builder framework built with vanilla ES6+ JavaScript.</p>
-        <a href="#" style="display:inline-block; padding:12px 32px; background:white; color:#764ba2; border-radius:6px; text-decoration:none; font-weight:600;">Get Started</a>
-      </section>
-      <section style="padding:40px 20px; max-width:960px; margin:0 auto;">
-        <div style="display:flex; gap:24px; flex-wrap:wrap;">
-          <div style="flex:1; min-width:250px; padding:24px; background:#f8f9fa; border-radius:8px; text-align:center;">
-            <div style="font-size:32px; margin-bottom:12px;">&#9889;</div>
-            <h3 style="margin-bottom:8px; color:#333;">Fast</h3>
-            <p style="color:#666; font-size:14px;">Zero dependencies means lightning-fast load times.</p>
-          </div>
-          <div style="flex:1; min-width:250px; padding:24px; background:#f8f9fa; border-radius:8px; text-align:center;">
-            <div style="font-size:32px; margin-bottom:12px;">&#128640;</div>
-            <h3 style="margin-bottom:8px; color:#333;">Modern</h3>
-            <p style="color:#666; font-size:14px;">Built with ES6+ features: classes, proxies, modules.</p>
-          </div>
-          <div style="flex:1; min-width:250px; padding:24px; background:#f8f9fa; border-radius:8px; text-align:center;">
-            <div style="font-size:32px; margin-bottom:12px;">&#128295;</div>
-            <h3 style="margin-bottom:8px; color:#333;">Extensible</h3>
-            <p style="color:#666; font-size:14px;">Plugin system for custom blocks, commands, and panels.</p>
-          </div>
-        </div>
-      </section>`;
-
-    // ── State ──
-    let selectedEl = null;
-    let iframeDoc = null;
-
-    // ── Render Blocks ──
-    const blocksPanel = document.getElementById('panel-blocks');
-    let currentCat = '';
-    let currentGrid = null;
-    for (const block of blocks) {
-      if (block.category !== currentCat) {
-        currentCat = block.category;
-        const cat = document.createElement('div');
-        cat.className = 'block-category';
-        cat.textContent = currentCat;
-        blocksPanel.appendChild(cat);
-        // New grid for each category
-        currentGrid = document.createElement('div');
-        currentGrid.className = 'blocks-grid';
-        blocksPanel.appendChild(currentGrid);
-      }
-      const el = document.createElement('div');
-      el.className = 'block-item';
-      el.innerHTML = `<div class="block-item__icon">${block.icon}</div><div class="block-item__label">${block.label}</div>`;
-      el.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-        const sx = e.clientX, sy = e.clientY;
-        const onMove = (me) => {
-          if (Math.abs(me.clientX - sx) > 4 || Math.abs(me.clientY - sy) > 4) {
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-            startDrag(block, me);
-          }
-        };
-        const onUp = () => {
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          // No drag happened → add to end
-          if (iframeDoc) {
-            const tmp = iframeDoc.createElement('div');
-            tmp.innerHTML = block.content;
-            while (tmp.firstChild) iframeDoc.body.appendChild(tmp.firstChild);
-            updateLayers();
-          }
-        };
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-      currentGrid.appendChild(el);
-    }
-
-    // ── Drag & Drop with iframe overlay ──
-    let dragGhost = null;
-    let dragOverlay = null;
-    let dragIndicator = null;
-    let dragBlock = null;
-    let dropRef = null; // { el, position: 'before'|'after' }
-
-    function startDrag(block, e) {
-      dragBlock = block;
-
-      // Prevent text selection during drag
-      e.preventDefault();
-      document.body.style.userSelect = 'none';
-      if (iframeDoc) iframeDoc.body.style.userSelect = 'none';
-      window.getSelection()?.removeAllRanges();
-
-      // Ghost follows cursor
-      dragGhost = document.createElement('div');
-      dragGhost.style.cssText = 'position:fixed;z-index:10000;padding:6px 14px;background:#7c3aed;color:white;border-radius:6px;font-size:12px;pointer-events:none;opacity:0.9;';
-      dragGhost.textContent = block.label;
-      document.body.appendChild(dragGhost);
-
-      // Transparent overlay on top of iframe to capture mouse events
-      const canvasArea = document.querySelector('.canvas-area');
-      dragOverlay = document.createElement('div');
-      dragOverlay.style.cssText = 'position:absolute;inset:0;z-index:100;cursor:grabbing;';
-      canvasArea.style.position = 'relative';
-      canvasArea.appendChild(dragOverlay);
-
-      // Drop indicator line inside iframe
-      dragIndicator = iframeDoc.createElement('div');
-      dragIndicator.style.cssText = 'height:3px;background:#7c3aed;margin:0;padding:0;pointer-events:none;transition:none;';
-
-      document.addEventListener('mousemove', onDragMove);
-      document.addEventListener('mouseup', onDragEnd);
-      onDragMove(e);
-    }
-
-    function onDragMove(e) {
-      // Move ghost
-      dragGhost.style.left = (e.clientX + 12) + 'px';
-      dragGhost.style.top = (e.clientY + 12) + 'px';
-
-      // Remove previous indicator
-      if (dragIndicator.parentElement) dragIndicator.remove();
-      dropRef = null;
-
-      // Get iframe position
-      const iframeRect = iframe.getBoundingClientRect();
-      const x = e.clientX - iframeRect.left;
-      const y = e.clientY - iframeRect.top;
-
-      // Out of iframe bounds
-      if (x < 0 || y < 0 || x > iframeRect.width || y > iframeRect.height) return;
-
-      const scrollTop = iframeDoc.documentElement.scrollTop || 0;
-
-      // Collect ALL visible elements and find the closest edge to the cursor
-      const allEls = iframeDoc.body.querySelectorAll('*');
-      let bestDist = Infinity;
-      let bestRef = null;
-
-      for (const el of allEls) {
-        if (el === dragIndicator || el.tagName === 'STYLE' || el.tagName === 'SCRIPT') continue;
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 && rect.height === 0) continue;
-
-        // Distance to top edge of this element → insert before
-        const distTop = Math.abs(y - rect.top);
-        if (distTop < bestDist) {
-          bestDist = distTop;
-          bestRef = { parent: el.parentElement, before: el };
-        }
-
-        // Distance to bottom edge → insert after
-        const distBot = Math.abs(y - rect.bottom);
-        if (distBot < bestDist) {
-          bestDist = distBot;
-          bestRef = { parent: el.parentElement, before: el.nextSibling };
-        }
-      }
-
-      // Also check end of body
-      const bodyBottom = iframeDoc.body.getBoundingClientRect().bottom;
-      if (Math.abs(y - bodyBottom) < bestDist) {
-        bestRef = { parent: iframeDoc.body, before: null };
-      }
-
-      if (!bestRef) {
-        iframeDoc.body.appendChild(dragIndicator);
-        dropRef = { parent: iframeDoc.body, before: null };
-        return;
-      }
-
-      try {
-        bestRef.parent.insertBefore(dragIndicator, bestRef.before);
-        dropRef = bestRef;
-      } catch (e) {
-        iframeDoc.body.appendChild(dragIndicator);
-        dropRef = { parent: iframeDoc.body, before: null };
-      }
-    }
-
-    function onDragEnd(e) {
-      document.removeEventListener('mousemove', onDragMove);
-      document.removeEventListener('mouseup', onDragEnd);
-
-      // Cleanup UI
-      // Restore text selection
-      document.body.style.userSelect = '';
-      if (iframeDoc) iframeDoc.body.style.userSelect = '';
-
-      if (dragGhost) { dragGhost.remove(); dragGhost = null; }
-      if (dragOverlay) { dragOverlay.remove(); dragOverlay = null; }
-      if (dragIndicator && dragIndicator.parentElement) dragIndicator.remove();
-
-      if (!dragBlock || !iframeDoc) { dragBlock = null; return; }
-
-      // Insert the block content
-      const tmp = iframeDoc.createElement('div');
-      tmp.innerHTML = dragBlock.content;
-
-      if (dropRef && dropRef.parent) {
-        while (tmp.firstChild) dropRef.parent.insertBefore(tmp.firstChild, dropRef.before);
-      } else {
-        while (tmp.firstChild) iframeDoc.body.appendChild(tmp.firstChild);
-      }
-
-      updateLayers();
-      dragBlock = null;
-      dropRef = null;
-    }
-
-    // ── Canvas iframe ──
-    const iframe = document.getElementById('canvas-iframe');
-    iframe.addEventListener('load', () => initCanvas());
-
-    function initCanvas() {
-      iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-      iframeDoc.open();
-      iframeDoc.write(`<!DOCTYPE html><html><head><style>
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; }
-        [data-vb-hover] { outline: 2px dashed #7c3aed !important; outline-offset: -2px; }
-        [data-vb-selected] { outline: 2px solid #7c3aed !important; outline-offset: -2px; }
-      </style></head><body>${initialHTML}</body></html>`);
-      iframeDoc.close();
-
-      // Setup canvas interactions
-      setupCanvasEvents();
-      updateLayers();
-
-      // Drag cursor style on iframe
-      iframeDoc.body.addEventListener('dragover', (e) => e.preventDefault());
-    }
-    // Trigger initial load
-    initCanvas();
-
-    // ── Canvas Events (select, hover) ──
-    function setupCanvasEvents() {
-      iframeDoc.addEventListener('mouseover', (e) => {
-        if (e.target === iframeDoc.body || e.target === iframeDoc.documentElement) return;
-        clearHover();
-        e.target.setAttribute('data-vb-hover', '');
-      });
-      iframeDoc.addEventListener('mouseout', (e) => { clearHover(); });
-      iframeDoc.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        selectElement(e.target === iframeDoc.body ? null : e.target);
-      });
-      // Double-click: inline edit text or change image
-      iframeDoc.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const el = e.target;
-        if (!el || el === iframeDoc.body) return;
-
-        const tag = el.tagName.toLowerCase();
-
-        // Images: prompt for new URL
-        if (tag === 'img') {
-          const src = prompt('Image URL:', el.src || '');
-          if (src !== null) { el.src = src; scheduleSync(); }
-          return;
-        }
-
-        // Icons: detect element with single emoji/short content and large font
-        const text = el.textContent.trim();
-        const cs = iframe.contentWindow.getComputedStyle(el);
-        const fontSize = parseFloat(cs.fontSize);
-        if (text.length <= 2 && fontSize >= 24) {
-          showIconPicker(el);
-          return;
-        }
-
-        // Text elements: make contentEditable
-        const textTags = ['h1','h2','h3','h4','h5','h6','p','span','a','li','label','button','td','th','div'];
-        if (textTags.includes(tag) || el.childNodes.length <= 3) {
-          el.contentEditable = 'true';
-          el.focus();
-          el.style.outline = '2px solid #f59e0b';
-          el.style.outlineOffset = '-2px';
-
-          const done = () => {
-            el.contentEditable = 'false';
-            el.style.outline = '';
-            el.style.outlineOffset = '';
-            el.removeEventListener('blur', done);
-            el.removeEventListener('keydown', onKey);
-            scheduleSync();
-            updateLayers();
-          };
-          const onKey = (ke) => {
-            if (ke.key === 'Escape' || (ke.key === 'Enter' && !ke.shiftKey)) {
-              ke.preventDefault();
-              el.blur();
-            }
-          };
-          el.addEventListener('blur', done);
-          el.addEventListener('keydown', onKey);
-        }
-      });
-
-      // Delete on keypress (only when not editing)
-      iframeDoc.addEventListener('keydown', (e) => {
-        // Don't delete while editing text
-        if (e.target.contentEditable === 'true') return;
-        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEl && selectedEl !== iframeDoc.body) {
-          selectedEl.remove();
-          selectElement(null);
-          updateLayers();
-        }
-      });
-    }
-
-    function clearHover() {
-      if (!iframeDoc) return;
-      iframeDoc.querySelectorAll('[data-vb-hover]').forEach(el => el.removeAttribute('data-vb-hover'));
-    }
-
-    function selectElement(el) {
-      if (!iframeDoc) return;
-      // Clear previous
-      iframeDoc.querySelectorAll('[data-vb-selected]').forEach(e => e.removeAttribute('data-vb-selected'));
-      selectedEl = el;
-
-      const infoEl = document.getElementById('selected-info');
-      if (el && el !== iframeDoc.body) {
-        el.setAttribute('data-vb-selected', '');
-        el.focus?.();
-        infoEl.innerHTML = `<span class="selected-info__tag">&lt;${el.tagName.toLowerCase()}&gt;</span><span class="selected-info__name">${el.className ? '.' + el.className.split(' ')[0] : ''}</span>`;
-        renderStylePanel(el);
-        renderTraitPanel(el);
-      } else {
-        selectedEl = null;
-        infoEl.innerHTML = '<span class="selected-info--empty">Select a component</span>';
-        document.getElementById('panel-styles').innerHTML = '<div style="padding:20px; color:#4a4a6a; font-size:12px; text-align:center;">Select a component to edit styles</div>';
-        document.getElementById('panel-traits').innerHTML = '';
-      }
-      // Highlight in layers
-      document.querySelectorAll('.layer-item.selected').forEach(l => l.classList.remove('selected'));
-      if (el) {
-        const idx = [...(iframeDoc.body.querySelectorAll('*'))].indexOf(el);
-        const layerItem = document.querySelector(`.layer-item[data-idx="${idx}"]`);
-        if (layerItem) layerItem.classList.add('selected');
-      }
-    }
-
-    // ── Style Panel ──
-    const styleSectors = [
-      { id: 'dimension', name: 'Dimension', open: true, props: [
-        { prop: 'width', type: 'text', ph: 'auto' },
-        { prop: 'height', type: 'text', ph: 'auto' },
-        { prop: 'min-height', type: 'text', ph: '0' },
-        { prop: 'max-width', type: 'text', ph: 'none' },
-        { prop: 'padding', type: 'text', ph: '0' },
-        { prop: 'margin', type: 'text', ph: '0' },
-      ]},
-      { id: 'typography', name: 'Typography', open: true, props: [
-        { prop: 'font-family', type: 'select', options: ['', 'Arial, sans-serif', 'Georgia, serif', '"Courier New", monospace', 'Verdana, sans-serif', 'system-ui, sans-serif'] },
-        { prop: 'font-size', type: 'text', ph: '16px' },
-        { prop: 'font-weight', type: 'select', options: ['', '100', '200', '300', '400', '500', '600', '700', '800', '900'] },
-        { prop: 'color', type: 'color' },
-        { prop: 'line-height', type: 'text', ph: 'normal' },
-        { prop: 'text-align', type: 'radio', options: [{v:'left',l:'L'},{v:'center',l:'C'},{v:'right',l:'R'},{v:'justify',l:'J'}] },
-        { prop: 'text-decoration', type: 'select', options: ['', 'none', 'underline', 'line-through', 'overline'] },
-        { prop: 'text-transform', type: 'select', options: ['', 'none', 'uppercase', 'lowercase', 'capitalize'] },
-        { prop: 'letter-spacing', type: 'text', ph: 'normal' },
-      ]},
-      { id: 'decorations', name: 'Decorations', open: false, props: [
-        { prop: 'background-color', type: 'color' },
-        { prop: 'background', type: 'text', ph: 'none' },
-        { prop: 'opacity', type: 'slider', min: 0, max: 1, step: 0.01 },
-        { prop: 'border', type: 'text', ph: 'none' },
-        { prop: 'border-radius', type: 'text', ph: '0' },
-        { prop: 'box-shadow', type: 'text', ph: 'none' },
-      ]},
-      { id: 'layout', name: 'Layout', open: false, props: [
-        { prop: 'display', type: 'select', options: ['', 'block', 'inline', 'inline-block', 'flex', 'grid', 'none'] },
-        { prop: 'position', type: 'select', options: ['', 'static', 'relative', 'absolute', 'fixed', 'sticky'] },
-        { prop: 'top', type: 'text', ph: 'auto' },
-        { prop: 'left', type: 'text', ph: 'auto' },
-        { prop: 'right', type: 'text', ph: 'auto' },
-        { prop: 'bottom', type: 'text', ph: 'auto' },
-        { prop: 'z-index', type: 'text', ph: 'auto' },
-        { prop: 'overflow', type: 'select', options: ['', 'visible', 'hidden', 'scroll', 'auto'] },
-        { prop: 'float', type: 'select', options: ['', 'none', 'left', 'right'] },
-      ]},
-      { id: 'flex', name: 'Flexbox', open: false, props: [
-        { prop: 'flex-direction', type: 'select', options: ['', 'row', 'row-reverse', 'column', 'column-reverse'] },
-        { prop: 'flex-wrap', type: 'select', options: ['', 'nowrap', 'wrap', 'wrap-reverse'] },
-        { prop: 'justify-content', type: 'select', options: ['', 'flex-start', 'flex-end', 'center', 'space-between', 'space-around', 'space-evenly'] },
-        { prop: 'align-items', type: 'select', options: ['', 'flex-start', 'flex-end', 'center', 'stretch', 'baseline'] },
-        { prop: 'gap', type: 'text', ph: '0' },
-        { prop: 'flex-grow', type: 'text', ph: '0' },
-        { prop: 'flex-shrink', type: 'text', ph: '1' },
-        { prop: 'flex-basis', type: 'text', ph: 'auto' },
-        { prop: 'order', type: 'text', ph: '0' },
-        { prop: 'align-self', type: 'select', options: ['', 'auto', 'flex-start', 'flex-end', 'center', 'stretch', 'baseline'] },
-      ]},
-    ];
-
-    function renderStylePanel(el) {
-      const panel = document.getElementById('panel-styles');
-      panel.innerHTML = '';
-      const cs = iframe.contentWindow.getComputedStyle(el);
-
-      for (const sector of styleSectors) {
-        const sec = document.createElement('div');
-        sec.className = 'sm-sector';
-        let open = sector.open;
-
-        const title = document.createElement('div');
-        title.className = 'sm-sector__title';
-        title.innerHTML = `<span class="sm-sector__arrow">${open ? '\u25BC' : '\u25B6'}</span>${sector.name}`;
-        sec.appendChild(title);
-
-        const propsEl = document.createElement('div');
-        propsEl.className = `sm-sector__props${open ? '' : ' closed'}`;
-
-        title.addEventListener('click', () => {
-          open = !open;
-          propsEl.classList.toggle('closed');
-          title.querySelector('.sm-sector__arrow').textContent = open ? '\u25BC' : '\u25B6';
-        });
-
-        for (const p of sector.props) {
-          const row = document.createElement('div');
-          row.className = 'sm-prop';
-
-          const label = document.createElement('div');
-          label.className = 'sm-prop__label';
-          label.textContent = p.prop;
-          row.appendChild(label);
-
-          const val = el.style.getPropertyValue(p.prop) || '';
-          let input;
-
-          if (p.type === 'select') {
-            input = document.createElement('select');
-            input.className = 'sm-prop__input sm-prop__input--select';
-            for (const o of p.options) { const opt = document.createElement('option'); opt.value = o; opt.textContent = o || '—'; if (o === val) opt.selected = true; input.appendChild(opt); }
-          } else if (p.type === 'color') {
-            const wrap = document.createElement('div'); wrap.className = 'sm-color';
-            const ci = document.createElement('input'); ci.type = 'color'; ci.value = rgbToHex(cs.getPropertyValue(p.prop)) || '#000000';
-            const ti = document.createElement('input'); ti.type = 'text'; ti.className = 'sm-prop__input'; ti.value = val; ti.placeholder = '#000000';
-            ci.addEventListener('input', () => { ti.value = ci.value; el.style.setProperty(p.prop, ci.value); });
-            ti.addEventListener('change', () => { ci.value = rgbToHex(ti.value) || '#000000'; el.style.setProperty(p.prop, ti.value); });
-            wrap.appendChild(ci); wrap.appendChild(ti);
-            row.appendChild(wrap);
-            propsEl.appendChild(row);
-            continue;
-          } else if (p.type === 'slider') {
-            const wrap = document.createElement('div'); wrap.className = 'sm-slider';
-            const si = document.createElement('input'); si.type = 'range'; si.min = p.min; si.max = p.max; si.step = p.step; si.value = parseFloat(cs.getPropertyValue(p.prop)) || p.max;
-            const sv = document.createElement('span'); sv.className = 'sm-slider__val'; sv.textContent = si.value;
-            si.addEventListener('input', () => { sv.textContent = si.value; el.style.setProperty(p.prop, si.value); });
-            wrap.appendChild(si); wrap.appendChild(sv);
-            row.appendChild(wrap);
-            propsEl.appendChild(row);
-            continue;
-          } else if (p.type === 'radio') {
-            const wrap = document.createElement('div'); wrap.className = 'sm-radio';
-            const name = 'r-' + p.prop + Date.now();
-            for (const o of p.options) {
-              const lb = document.createElement('label');
-              const rb = document.createElement('input'); rb.type = 'radio'; rb.name = name; rb.value = o.v; if (val === o.v) rb.checked = true;
-              const sp = document.createElement('span'); sp.textContent = o.l;
-              rb.addEventListener('change', () => el.style.setProperty(p.prop, o.v));
-              lb.appendChild(rb); lb.appendChild(sp); wrap.appendChild(lb);
-            }
-            row.appendChild(wrap);
-            propsEl.appendChild(row);
-            continue;
-          } else {
-            input = document.createElement('input');
-            input.type = 'text'; input.className = 'sm-prop__input'; input.value = val; input.placeholder = p.ph || '';
-          }
-
-          if (input) {
-            input.addEventListener('change', () => {
-              if (input.value) el.style.setProperty(p.prop, input.value);
-              else el.style.removeProperty(p.prop);
-            });
-            row.appendChild(input);
-          }
-          propsEl.appendChild(row);
-        }
-        sec.appendChild(propsEl);
-        panel.appendChild(sec);
-      }
-    }
-
-    // ── Traits Panel ──
-    function renderTraitPanel(el) {
-      const panel = document.getElementById('panel-traits');
-      panel.innerHTML = '';
-      const tag = el.tagName.toLowerCase();
-      const traits = [
-        { name: 'id', label: 'ID', type: 'text' },
-        { name: 'title', label: 'Title', type: 'text' },
-        { name: 'class', label: 'Class', type: 'text' },
-      ];
-      if (tag === 'a') traits.push({ name: 'href', label: 'Href', type: 'text' }, { name: 'target', label: 'Target', type: 'select', options: ['', '_blank', '_self'] });
-      if (tag === 'img') traits.push({ name: 'src', label: 'Source', type: 'text' }, { name: 'alt', label: 'Alt text', type: 'text' });
-
-      for (const t of traits) {
-        const row = document.createElement('div'); row.className = 'trait-row';
-        const label = document.createElement('div'); label.className = 'trait-row__label'; label.textContent = t.label;
-        let input;
-        if (t.type === 'select') {
-          input = document.createElement('select'); input.className = 'sm-prop__input sm-prop__input--select';
-          for (const o of t.options) { const opt = document.createElement('option'); opt.value = o; opt.textContent = o || '—'; if (el.getAttribute(t.name) === o) opt.selected = true; input.appendChild(opt); }
-        } else {
-          input = document.createElement('input'); input.type = 'text'; input.className = 'sm-prop__input';
-          input.value = t.name === 'class' ? el.className : (el.getAttribute(t.name) || '');
-        }
-        input.addEventListener('change', () => {
-          if (t.name === 'class') el.className = input.value;
-          else if (input.value) el.setAttribute(t.name, input.value);
-          else el.removeAttribute(t.name);
-          updateLayers();
-        });
-        row.appendChild(label); row.appendChild(input); panel.appendChild(row);
-      }
-    }
-
-    // ── Layers ──
-    function updateLayers() {
-      const panel = document.getElementById('panel-layers');
-      panel.innerHTML = '';
-      if (!iframeDoc) return;
-      const tree = document.createElement('div'); tree.className = 'layers-tree';
-      let idx = 0;
-      function walk(el, depth) {
-        for (const child of el.children) {
-          if (child.tagName === 'STYLE' || child.tagName === 'SCRIPT') continue;
-          const item = document.createElement('div');
-          item.className = 'layer-item';
-          item.setAttribute('data-idx', idx);
-          if (child === selectedEl) item.classList.add('selected');
-          const currentIdx = idx; idx++;
-          item.innerHTML = `<span class="layer-item__indent" style="width:${depth*16}px;"></span><span class="layer-item__tag">&lt;${child.tagName.toLowerCase()}&gt;</span> ${child.id ? '#' + child.id : ''} ${child.className ? '.' + child.className.split(' ')[0] : ''}`;
-          item.addEventListener('click', () => selectElement(child));
-          tree.appendChild(item);
-          walk(child, depth + 1);
-        }
-      }
-      walk(iframeDoc.body, 0);
-      panel.appendChild(tree);
-    }
-
-    // ── Tab switching ──
-    document.querySelectorAll('.sidebar__tab[data-tab]').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.sidebar__tab[data-tab]').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('panel-blocks').style.display = tab.dataset.tab === 'blocks' ? '' : 'none';
-        document.getElementById('panel-layers').style.display = tab.dataset.tab === 'layers' ? '' : 'none';
-        if (tab.dataset.tab === 'layers') updateLayers();
-      });
-    });
-    document.querySelectorAll('.sidebar__tab[data-rtab]').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.sidebar__tab[data-rtab]').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('panel-theme').style.display = tab.dataset.rtab === 'theme' ? '' : 'none';
-        document.getElementById('panel-styles').style.display = tab.dataset.rtab === 'styles' ? '' : 'none';
-        document.getElementById('panel-traits').style.display = tab.dataset.rtab === 'traits' ? '' : 'none';
-        document.getElementById('panel-data').style.display = tab.dataset.rtab === 'data' ? '' : 'none';
-        if (tab.dataset.rtab === 'theme') loadThemePanel();
-        if (tab.dataset.rtab === 'data') loadDataPanel();
-      });
-    });
-
-    // ── Device switching ──
-    document.querySelectorAll('.topbar__device').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.topbar__device').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const frame = document.getElementById('canvas-frame');
-        frame.classList.remove('tablet', 'mobile');
-        if (btn.dataset.device !== 'desktop') frame.classList.add(btn.dataset.device);
-      });
-    });
-
-    // ── Session modal ──
-    document.getElementById('btn-session').addEventListener('click', () => {
-      document.getElementById('session-id-display').value = pollSessionId;
-      document.getElementById('session-link-display').value = window.location.origin + '/?sessionId=' + pollSessionId;
-      document.getElementById('session-modal').style.display = 'flex';
-    });
-    document.getElementById('close-session-modal').addEventListener('click', () => {
-      document.getElementById('session-modal').style.display = 'none';
-    });
-    document.getElementById('btn-copy-session').addEventListener('click', () => {
-      navigator.clipboard.writeText(pollSessionId);
-      document.getElementById('btn-copy-session').textContent = 'Copied!';
-      setTimeout(() => document.getElementById('btn-copy-session').textContent = 'Copy', 1500);
-    });
-    document.getElementById('btn-copy-link').addEventListener('click', () => {
-      navigator.clipboard.writeText(window.location.origin + '/?sessionId=' + pollSessionId);
-      document.getElementById('btn-copy-link').textContent = 'Copied!';
-      setTimeout(() => document.getElementById('btn-copy-link').textContent = 'Copy', 1500);
-    });
-    document.getElementById('btn-reset-session').addEventListener('click', () => {
-      // Delete old session from API
-      fetch('/api/session?sessionId=' + pollSessionId, { method: 'DELETE' }).catch(() => {});
-      localStorage.removeItem('vb_sessionId');
-      window.location.href = window.location.origin + '/';
-    });
-
-    // ── Top bar actions ──
-    document.getElementById('btn-preview').addEventListener('click', () => {
-      document.getElementById('app').classList.toggle('preview-mode');
-      const btn = document.getElementById('btn-preview');
-      btn.textContent = document.getElementById('app').classList.contains('preview-mode') ? 'Exit Preview' : 'Preview';
-    });
-
-    document.getElementById('btn-code').addEventListener('click', () => {
-      const modal = document.getElementById('code-modal');
-      modal.style.display = 'flex';
-      document.getElementById('code-html').textContent = iframeDoc.body.innerHTML;
-      document.getElementById('code-css').textContent = '/* Inline styles are embedded in HTML */\n\nbody {\n  margin: 0;\n  font-family: system-ui, sans-serif;\n}';
-    });
-    document.getElementById('close-modal').addEventListener('click', () => { document.getElementById('code-modal').style.display = 'none'; });
-
-    document.getElementById('btn-export').addEventListener('click', async () => {
-      try {
-        const res = await fetch('/api/execute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: pollSessionId, method: 'exportProject', params: { title: 'My Page' } }),
-        });
-        const data = await res.json();
-        if (!data.ok) { showToast('Export failed: ' + data.error); return; }
-
-        const files = data.data.files;
-
-        // Download each file
-        for (const [name, content] of Object.entries(files)) {
-          const blob = new Blob([content], { type: name.endsWith('.html') ? 'text/html' : name.endsWith('.css') ? 'text/css' : 'text/javascript' });
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = name;
-          a.click();
-          URL.revokeObjectURL(a.href);
-          // Small delay between downloads so browser doesn't block them
-          await new Promise(r => setTimeout(r, 300));
-        }
-
-        showToast('Exported ' + data.data.fileCount + ' files!');
-      } catch (e) {
-        showToast('Export error: ' + e.message);
-      }
-    });
-
-    document.getElementById('btn-save').addEventListener('click', () => {
-      const data = { html: iframeDoc.body.innerHTML, timestamp: Date.now() };
-      localStorage.setItem('vanillabuilder-project', JSON.stringify(data));
-      showToast('Project saved!');
-    });
-
-    // ── Load saved project ──
-    const saved = localStorage.getItem('vanillabuilder-project');
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        if (data.html && confirm('Load previously saved project?')) {
-          setTimeout(() => {
-            iframeDoc.body.innerHTML = data.html;
-            setupCanvasEvents();
-            updateLayers();
-          }, 100);
-        }
-      } catch (e) {}
-    }
-
-    // ── Utilities ──
-    function rgbToHex(color) {
-      if (!color) return '';
-      if (color.startsWith('#')) return color.length <= 7 ? color : color.slice(0, 7);
-      const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-      if (m) return '#' + [m[1], m[2], m[3]].map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
-      return '';
-    }
-
-    function showToast(msg) {
-      const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
-      document.body.appendChild(t);
-      setTimeout(() => t.remove(), 2500);
-    }
-
-    // ── Collapsible Sidebars (via topbar toggles) ──
-    document.getElementById('toggle-left').addEventListener('click', () => {
-      const sidebar = document.getElementById('sidebar-left');
-      const btn = document.getElementById('toggle-left');
-      sidebar.classList.toggle('collapsed');
-      btn.classList.toggle('active');
-    });
-    document.getElementById('toggle-right').addEventListener('click', () => {
-      const sidebar = document.getElementById('sidebar-right');
-      const btn = document.getElementById('toggle-right');
-      sidebar.classList.toggle('collapsed');
-      btn.classList.toggle('active');
-    });
-
-    // ── Session: each user gets a unique session ──
-    function getOrCreateSessionId() {
-      // 1. URL param takes priority (agent can share a link)
-      const urlSid = new URLSearchParams(window.location.search).get('sessionId');
-      if (urlSid) { localStorage.setItem('vb_sessionId', urlSid); return urlSid; }
-      // 2. Existing session in localStorage
-      const stored = localStorage.getItem('vb_sessionId');
-      if (stored) return stored;
-      // 3. Generate new unique session
-      const newSid = 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
-      localStorage.setItem('vb_sessionId', newSid);
-      return newSid;
-    }
-    const pollSessionId = getOrCreateSessionId();
-
-    // Register session in the API (so agents can use it)
-    fetch('/api/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: pollSessionId }),
-    }).catch(() => {});
-
-    console.log('Session ID:', pollSessionId);
-    console.log('Share this URL to let an agent edit your page:');
-    console.log(window.location.origin + '/?sessionId=' + pollSessionId);
-
-    // ── Icon Picker ──
-    function showIconPicker(targetEl) {
-      // Remove existing picker
-      const old = document.getElementById('vb-icon-picker');
-      if (old) old.remove();
-
-      const icons = [
-        '⚡','🚀','💡','🔒','🌍','🎨','⭐','🔧','💎','🎯',
-        '📱','💻','☁️','📊','🔔','❤️','✅','📦','🏆','🎉',
-        '👤','👥','📧','📞','🕐','📍','🔗','📝','🛡️','⚙️',
-        '🔥','✨','💰','📈','🎵','📸','🎬','🌐','🏠','💬',
-        '👍','👁️','🧩','🎁','🪄','🫐','🍀','🌟','💫','🌈',
-      ];
-
-      const picker = document.createElement('div');
-      picker.id = 'vb-icon-picker';
-      picker.style.cssText = 'position:fixed;z-index:10001;background:#1e1e36;border:1px solid #2a2a4a;border-radius:12px;padding:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
-
-      // Position near the target element
-      const iframeRect = iframe.getBoundingClientRect();
-      const elRect = targetEl.getBoundingClientRect();
-      picker.style.left = Math.min(iframeRect.left + elRect.left, window.innerWidth - 280) + 'px';
-      picker.style.top = Math.min(iframeRect.top + elRect.bottom + 8, window.innerHeight - 200) + 'px';
-
-      // Header
-      const header = document.createElement('div');
-      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
-      header.innerHTML = '<span style="font-size:12px;color:#a78bfa;font-weight:600;">Pick an icon</span>';
-      const closeBtn = document.createElement('span');
-      closeBtn.textContent = '\u00d7';
-      closeBtn.style.cssText = 'cursor:pointer;color:#6c7086;font-size:18px;';
-      closeBtn.addEventListener('click', () => picker.remove());
-      header.appendChild(closeBtn);
-      picker.appendChild(header);
-
-      // Grid
-      const grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:repeat(10,1fr);gap:4px;max-width:260px;';
-
-      for (const icon of icons) {
-        const btn = document.createElement('button');
-        btn.textContent = icon;
-        btn.style.cssText = 'width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:4px;font-size:16px;cursor:pointer;padding:0;';
-        btn.addEventListener('mouseenter', () => { btn.style.borderColor = '#7c3aed'; btn.style.background = '#252542'; });
-        btn.addEventListener('mouseleave', () => { btn.style.borderColor = 'transparent'; btn.style.background = 'transparent'; });
-        btn.addEventListener('click', () => {
-          targetEl.textContent = icon;
-          picker.remove();
-          scheduleSync();
-        });
-        grid.appendChild(btn);
-      }
-      picker.appendChild(grid);
-
-      document.body.appendChild(picker);
-
-      // Close on click outside
-      const closeOnOutside = (e) => {
-        if (!picker.contains(e.target)) {
-          picker.remove();
-          document.removeEventListener('mousedown', closeOnOutside);
-        }
-      };
-      setTimeout(() => document.addEventListener('mousedown', closeOnOutside), 100);
-    }
-
-    // ── Data Panel ──
-    async function loadDataPanel() {
-      const panel = document.getElementById('panel-data');
-      panel.innerHTML = '';
-
-      // Fetch current data sources and form actions
-      let dataSources = [], formActions = [];
-      try {
-        const dsRes = await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'getDataSources'}) });
-        const dsData = await dsRes.json();
-        if (dsData.ok) dataSources = dsData.data;
-
-        const faRes = await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'getFormActions'}) });
-        const faData = await faRes.json();
-        if (faData.ok) formActions = faData.data;
-      } catch(e) {}
-
-      // ── Data Sources section ──
-      const dsHeader = document.createElement('div');
-      dsHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
-      dsHeader.innerHTML = '<span style="font-size:12px;font-weight:600;color:#a78bfa;text-transform:uppercase;letter-spacing:0.5px;">API Data Sources</span>';
-      const addDsBtn = document.createElement('button');
-      addDsBtn.textContent = '+ Add';
-      addDsBtn.style.cssText = 'padding:4px 10px;background:#252542;border:1px solid #3a3a5a;border-radius:4px;color:#cdd6f4;font-size:11px;cursor:pointer;';
-      addDsBtn.addEventListener('click', () => showDataSourceForm(panel));
-      dsHeader.appendChild(addDsBtn);
-      panel.appendChild(dsHeader);
-
-      if (dataSources.length === 0) {
-        const empty = document.createElement('div');
-        empty.style.cssText = 'padding:12px;color:#4a4a6a;font-size:12px;text-align:center;border:1px dashed #2a2a4a;border-radius:6px;margin-bottom:16px;';
-        empty.textContent = 'No data sources. Click + Add to connect an API.';
-        panel.appendChild(empty);
-      } else {
-        for (const ds of dataSources) {
-          panel.appendChild(makeDataSourceCard(ds));
-        }
-      }
-
-      // Separator
-      const sep = document.createElement('div');
-      sep.style.cssText = 'border-top:1px solid #2a2a4a;margin:16px 0;';
-      panel.appendChild(sep);
-
-      // ── Form Actions section ──
-      const faHeader = document.createElement('div');
-      faHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
-      faHeader.innerHTML = '<span style="font-size:12px;font-weight:600;color:#a78bfa;text-transform:uppercase;letter-spacing:0.5px;">Form Webhooks</span>';
-      const addFaBtn = document.createElement('button');
-      addFaBtn.textContent = '+ Add';
-      addFaBtn.style.cssText = 'padding:4px 10px;background:#252542;border:1px solid #3a3a5a;border-radius:4px;color:#cdd6f4;font-size:11px;cursor:pointer;';
-      addFaBtn.addEventListener('click', () => showFormActionForm(panel));
-      faHeader.appendChild(addFaBtn);
-      panel.appendChild(faHeader);
-
-      if (formActions.length === 0) {
-        const empty = document.createElement('div');
-        empty.style.cssText = 'padding:12px;color:#4a4a6a;font-size:12px;text-align:center;border:1px dashed #2a2a4a;border-radius:6px;';
-        empty.textContent = 'No form webhooks. Click + Add to connect a form.';
-        panel.appendChild(empty);
-      } else {
-        for (const fa of formActions) {
-          panel.appendChild(makeFormActionCard(fa));
-        }
-      }
-    }
-
-    function makeDataSourceCard(ds) {
-      const card = document.createElement('div');
-      card.style.cssText = 'padding:10px;background:#252542;border:1px solid #2a2a4a;border-radius:6px;margin-bottom:8px;font-size:11px;';
-      card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <strong style="color:#cdd6f4;">${ds.id}</strong>
-          <span class="ds-remove" style="color:#f38ba8;cursor:pointer;font-size:14px;" title="Remove">&times;</span>
-        </div>
-        <div style="color:#6c7086;word-break:break-all;margin-bottom:4px;">${ds.url}</div>
-        ${ds.path ? `<div style="color:#89b4fa;">Path: ${ds.path}</div>` : ''}
-        <div style="color:#6c7086;">Target: ${ds.targetSelector}</div>
-        ${ds.pagination ? `<div style="color:#a6e3a1;">Paginated: ${ds.pagination.perPage}/page</div>` : ''}
-      `;
-      card.querySelector('.ds-remove').addEventListener('click', async () => {
-        await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'removeDataSource',params:{id:ds.id}}) });
-        loadDataPanel();
-      });
-      return card;
-    }
-
-    function makeFormActionCard(fa) {
-      const card = document.createElement('div');
-      card.style.cssText = 'padding:10px;background:#252542;border:1px solid #2a2a4a;border-radius:6px;margin-bottom:8px;font-size:11px;';
-      card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <strong style="color:#cdd6f4;">${fa.id}</strong>
-          <span class="fa-remove" style="color:#f38ba8;cursor:pointer;font-size:14px;" title="Remove">&times;</span>
-        </div>
-        <div style="color:#6c7086;">Form: ${fa.formSelector}</div>
-        <div style="color:#6c7086;word-break:break-all;">Webhook: ${fa.webhookUrl}</div>
-      `;
-      card.querySelector('.fa-remove').addEventListener('click', async () => {
-        await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'removeFormAction',params:{id:fa.id}}) });
-        loadDataPanel();
-      });
-      return card;
-    }
-
-    function showDataSourceForm(panel) {
-      const form = document.createElement('div');
-      form.style.cssText = 'padding:12px;background:#1a1a2e;border:1px solid #7c3aed;border-radius:8px;margin-bottom:12px;';
-      form.innerHTML = `
-        <div style="font-size:12px;font-weight:600;color:#cdd6f4;margin-bottom:10px;">New Data Source</div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">ID</div><input class="sm-prop__input" id="ds-id" placeholder="e.g. posts"/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">API URL</div><input class="sm-prop__input" id="ds-url" placeholder="https://api.example.com/data"/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Data Path</div><input class="sm-prop__input" id="ds-path" placeholder="e.g. data.results (dot notation)"/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Target</div><input class="sm-prop__input" id="ds-target" placeholder="CSS selector, e.g. #posts-list"/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Template</div><textarea class="sm-prop__input" id="ds-template" rows="3" style="height:auto;resize:vertical;" placeholder="<div>{{title}} by {{author.name}}</div>"></textarea></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Per Page</div><input class="sm-prop__input" id="ds-perpage" type="number" placeholder="0 = no pagination"/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Auth Header</div><input class="sm-prop__input" id="ds-auth" placeholder="Bearer xxx (optional)"/></div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button id="ds-save" style="flex:1;padding:8px;background:#7c3aed;color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save</button>
-          <button id="ds-cancel" style="padding:8px 12px;background:#252542;color:#cdd6f4;border:1px solid #3a3a5a;border-radius:4px;font-size:12px;cursor:pointer;">Cancel</button>
-        </div>
-      `;
-      panel.prepend(form);
-
-      form.querySelector('#ds-cancel').addEventListener('click', () => { form.remove(); });
-      form.querySelector('#ds-save').addEventListener('click', async () => {
-        const id = form.querySelector('#ds-id').value.trim();
-        const url = form.querySelector('#ds-url').value.trim();
-        const path = form.querySelector('#ds-path').value.trim();
-        const target = form.querySelector('#ds-target').value.trim();
-        const template = form.querySelector('#ds-template').value;
-        const perPage = parseInt(form.querySelector('#ds-perpage').value) || 0;
-        const auth = form.querySelector('#ds-auth').value.trim();
-
-        if (!id || !url || !target || !template) { alert('ID, URL, Target, and Template are required'); return; }
-
-        const params = { id, url, targetSelector: target, template, path };
-        if (perPage > 0) params.pagination = { perPage };
-        if (auth) params.headers = { Authorization: auth };
-
-        await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'addDataSource',params}) });
-        form.remove();
-        loadDataPanel();
-      });
-    }
-
-    function showFormActionForm(panel) {
-      const form = document.createElement('div');
-      form.style.cssText = 'padding:12px;background:#1a1a2e;border:1px solid #7c3aed;border-radius:8px;margin-bottom:12px;';
-      form.innerHTML = `
-        <div style="font-size:12px;font-weight:600;color:#cdd6f4;margin-bottom:10px;">New Form Webhook</div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">ID</div><input class="sm-prop__input" id="fa-id" placeholder="e.g. contact-form"/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Form Selector</div><input class="sm-prop__input" id="fa-selector" placeholder="e.g. form, #my-form"/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Webhook URL</div><input class="sm-prop__input" id="fa-webhook" placeholder="https://hooks.zapier.com/xxx"/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Success Msg</div><input class="sm-prop__input" id="fa-success" placeholder="Sent successfully!"/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Error Msg</div><input class="sm-prop__input" id="fa-error" placeholder="Failed to send."/></div>
-        <div class="sm-prop" style="margin-bottom:6px;"><div class="sm-prop__label">Redirect URL</div><input class="sm-prop__input" id="fa-redirect" placeholder="(optional)"/></div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button id="fa-save" style="flex:1;padding:8px;background:#7c3aed;color:white;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save</button>
-          <button id="fa-cancel" style="padding:8px 12px;background:#252542;color:#cdd6f4;border:1px solid #3a3a5a;border-radius:4px;font-size:12px;cursor:pointer;">Cancel</button>
-        </div>
-      `;
-      panel.appendChild(form);
-
-      form.querySelector('#fa-cancel').addEventListener('click', () => { form.remove(); });
-      form.querySelector('#fa-save').addEventListener('click', async () => {
-        const id = form.querySelector('#fa-id').value.trim();
-        const formSelector = form.querySelector('#fa-selector').value.trim();
-        const webhookUrl = form.querySelector('#fa-webhook').value.trim();
-        const successMessage = form.querySelector('#fa-success').value.trim() || 'Sent successfully!';
-        const errorMessage = form.querySelector('#fa-error').value.trim() || 'Failed to send.';
-        const redirectUrl = form.querySelector('#fa-redirect').value.trim();
-
-        if (!id || !formSelector || !webhookUrl) { alert('ID, Form Selector, and Webhook URL are required'); return; }
-
-        const params = { id, formSelector, webhookUrl, successMessage, errorMessage };
-        if (redirectUrl) params.redirectUrl = redirectUrl;
-
-        await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sessionId:pollSessionId,method:'addFormAction',params}) });
-        form.remove();
-        loadDataPanel();
-      });
-    }
-
-    // ── Theme Panel ──
-    let currentTheme = null;
-
-    async function loadThemePanel() {
-      const panel = document.getElementById('panel-theme');
-      panel.innerHTML = '<div style="color:#6c7086;font-size:12px;">Loading...</div>';
-
-      try {
-        const res = await fetch('/api/execute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: pollSessionId, method: 'getTheme' }),
-        });
-        const data = await res.json();
-        if (data.ok) {
-          currentTheme = data.data;
-          renderThemePanel(panel, currentTheme);
-        } else {
-          panel.innerHTML = '<div style="color:#f38ba8;font-size:12px;">Failed to load theme</div>';
-        }
-      } catch (e) {
-        panel.innerHTML = '<div style="color:#f38ba8;font-size:12px;">Error: ' + e.message + '</div>';
-      }
-    }
-
-    function renderThemePanel(panel, theme) {
-      panel.innerHTML = '';
-
-      // Colors
-      const colorSection = makeThemeSection('Colors');
-      const colorEntries = [
-        ['primary', 'Primary'], ['primaryLight', 'Primary Light'], ['primaryDark', 'Primary Dark'],
-        ['secondary', 'Secondary'], ['accent', 'Accent'],
-        ['background', 'Background'], ['surface', 'Surface'], ['surfaceDark', 'Surface Dark'],
-        ['text', 'Text'], ['textMuted', 'Text Muted'], ['textLight', 'Text Light'], ['border', 'Border'],
-      ];
-      for (const [key, label] of colorEntries) {
-        colorSection.content.appendChild(makeColorRow(label, theme.colors[key], (val) => {
-          theme.colors[key] = val;
-          saveTheme(theme);
-        }));
-      }
-      panel.appendChild(colorSection.el);
-
-      // Fonts
-      const fontSection = makeThemeSection('Fonts');
-      const fontOptions = [
-        "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
-        "Georgia, serif",
-        "'Times New Roman', serif",
-        "Verdana, sans-serif",
-        "'Courier New', monospace",
-        "Inter, sans-serif",
-        "'Playfair Display', serif",
-      ];
-      fontSection.content.appendChild(makeSelectRow('Heading', theme.fonts.heading, fontOptions, (val) => {
-        theme.fonts.heading = val;
-        saveTheme(theme);
-      }));
-      fontSection.content.appendChild(makeSelectRow('Body', theme.fonts.body, fontOptions, (val) => {
-        theme.fonts.body = val;
-        saveTheme(theme);
-      }));
-      panel.appendChild(fontSection.el);
-
-      // Sizes
-      const sizeSection = makeThemeSection('Sizes');
-      const sizeEntries = [
-        ['headingLg', 'Heading Large'], ['headingMd', 'Heading Medium'], ['headingSm', 'Heading Small'],
-        ['body', 'Body'], ['small', 'Small'],
-      ];
-      for (const [key, label] of sizeEntries) {
-        sizeSection.content.appendChild(makeTextRow(label, theme.sizes[key], (val) => {
-          theme.sizes[key] = val;
-          saveTheme(theme);
-        }));
-      }
-      panel.appendChild(sizeSection.el);
-
-      // Spacing
-      const spSection = makeThemeSection('Spacing');
-      const spEntries = [
-        ['sectionY', 'Section Vertical'], ['sectionX', 'Section Horizontal'],
-        ['cardPadding', 'Card Padding'], ['gap', 'Gap'],
-      ];
-      for (const [key, label] of spEntries) {
-        spSection.content.appendChild(makeTextRow(label, theme.spacing[key], (val) => {
-          theme.spacing[key] = val;
-          saveTheme(theme);
-        }));
-      }
-      panel.appendChild(spSection.el);
-
-      // Other
-      const otherSection = makeThemeSection('Other');
-      otherSection.content.appendChild(makeTextRow('Border Radius', theme.borderRadius, (val) => {
-        theme.borderRadius = val;
-        saveTheme(theme);
-      }));
-      otherSection.content.appendChild(makeTextRow('Max Width', theme.maxWidth, (val) => {
-        theme.maxWidth = val;
-        saveTheme(theme);
-      }));
-      panel.appendChild(otherSection.el);
-    }
-
-    function makeThemeSection(title) {
-      const el = document.createElement('div');
-      el.className = 'sm-sector';
-      const titleEl = document.createElement('div');
-      titleEl.className = 'sm-sector__title';
-      titleEl.innerHTML = `<span class="sm-sector__arrow">\u25BC</span>${title}`;
-      const content = document.createElement('div');
-      content.className = 'sm-sector__props';
-      content.style.display = '';
-      let open = true;
-      titleEl.addEventListener('click', () => {
-        open = !open;
-        content.classList.toggle('closed');
-        titleEl.querySelector('.sm-sector__arrow').textContent = open ? '\u25BC' : '\u25B6';
-      });
-      el.appendChild(titleEl);
-      el.appendChild(content);
-      return { el, content };
-    }
-
-    function makeColorRow(label, value, onChange) {
-      const row = document.createElement('div');
-      row.className = 'sm-prop';
-      row.innerHTML = `<div class="sm-prop__label">${label}</div>`;
-      const wrap = document.createElement('div');
-      wrap.className = 'sm-color';
-      const ci = document.createElement('input');
-      ci.type = 'color';
-      ci.value = value || '#000000';
-      const ti = document.createElement('input');
-      ti.type = 'text';
-      ti.className = 'sm-prop__input';
-      ti.value = value || '';
-      ci.addEventListener('input', () => { ti.value = ci.value; onChange(ci.value); });
-      ti.addEventListener('change', () => { ci.value = ti.value; onChange(ti.value); });
-      wrap.appendChild(ci);
-      wrap.appendChild(ti);
-      row.appendChild(wrap);
-      return row;
-    }
-
-    function makeTextRow(label, value, onChange) {
-      const row = document.createElement('div');
-      row.className = 'sm-prop';
-      row.innerHTML = `<div class="sm-prop__label">${label}</div>`;
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.className = 'sm-prop__input';
-      input.value = value || '';
-      input.addEventListener('change', () => onChange(input.value));
-      row.appendChild(input);
-      return row;
-    }
-
-    function makeSelectRow(label, value, options, onChange) {
-      const row = document.createElement('div');
-      row.className = 'sm-prop';
-      row.innerHTML = `<div class="sm-prop__label">${label}</div>`;
-      const select = document.createElement('select');
-      select.className = 'sm-prop__input sm-prop__input--select';
-      for (const opt of options) {
-        const o = document.createElement('option');
-        o.value = opt;
-        o.textContent = opt.split(',')[0].replace(/'/g, '');
-        if (opt === value) o.selected = true;
-        select.appendChild(o);
-      }
-      select.addEventListener('change', () => onChange(select.value));
-      row.appendChild(select);
-      return row;
-    }
-
-    let saveThemeTimer = null;
-    function saveTheme(theme) {
-      if (saveThemeTimer) clearTimeout(saveThemeTimer);
-      saveThemeTimer = setTimeout(async () => {
-        try {
-          await fetch('/api/execute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: pollSessionId, method: 'setTheme', params: theme }),
-          });
-        } catch (e) { /* retry next time */ }
-      }, 500);
-    }
-
-    // ── Bidirectional Sync ──
-    let lastHtml = '';
-    let syncPaused = false; // pause polling while editor is syncing
-
-    // Editor → API: push changes when user modifies anything
-    let syncTimer = null;
-    function scheduleSync() {
-      if (syncTimer) clearTimeout(syncTimer);
-      syncTimer = setTimeout(syncToAPI, 1500); // debounce 1.5s
-    }
-
-    async function syncToAPI() {
-      if (!iframeDoc || document.hidden) return;
-      const html = iframeDoc.body.innerHTML;
-      if (html === lastHtml) return;
-      lastHtml = html;
-      syncPaused = true;
-      try {
-        await fetch('/api/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: pollSessionId, html }),
-        });
-        // After user edits, reset polling to fast (collaborator might respond)
-        noChangeCount = 0;
-        pollInterval = 2000;
-      } catch (e) { /* retry next time */ }
-      setTimeout(() => { syncPaused = false; }, 2000);
-    }
-
-    // Watch for editor changes (MutationObserver on iframe body)
-    function watchEditorChanges() {
-      if (!iframeDoc) return;
-      const observer = new MutationObserver(() => scheduleSync());
-      observer.observe(iframeDoc.body, { childList: true, subtree: true, attributes: true, characterData: true });
-    }
-
-    // API → Editor: adaptive polling (saves KV reads)
-    // Starts at 2s, slows to 5s → 10s → 30s if no changes, resets on change
-    let pollInterval = 2000;
-    let pollTimer = null;
-    let noChangeCount = 0;
-    let knownVersion = '0';
-
-    async function pollAPI() {
-      if (syncPaused) { schedulePoll(); return; }
-      try {
-        // Send known version — server skips heavy read if unchanged
-        const res = await fetch(`/api/poll?sessionId=${pollSessionId}&v=${knownVersion}`);
-        const data = await res.json();
-        if (data.ok && data.data.changed && data.data.html && data.data.html !== lastHtml) {
-          lastHtml = data.data.html;
-          knownVersion = data.data.version || '0';
-          const doc = iframe.contentDocument || iframe.contentWindow.document;
-          doc.body.innerHTML = data.data.html;
-          setupCanvasEvents();
-          updateLayers();
-          noChangeCount = 0;
-          pollInterval = 2000;
-        } else {
-          if (data.ok && data.data.version) knownVersion = data.data.version;
-          noChangeCount++;
-          if (noChangeCount > 5) pollInterval = 5000;
-          if (noChangeCount > 15) pollInterval = 10000;
-          if (noChangeCount > 30) pollInterval = 30000;
-        }
-      } catch (e) { /* silently retry */ }
-      schedulePoll();
-    }
-
-    function schedulePoll() {
-      if (pollTimer) clearTimeout(pollTimer);
-      pollTimer = setTimeout(pollAPI, pollInterval);
-    }
-
-    // Reset to fast polling when user interacts (they might be collaborating)
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) { noChangeCount = 0; pollInterval = 2000; schedulePoll(); }
-    });
-
-    schedulePoll();
-    // Start MutationObserver after first iframe load
-    const origInitCanvas = initCanvas;
-    iframe.addEventListener('load', () => { setTimeout(watchEditorChanges, 500); });
-    setTimeout(watchEditorChanges, 1000);
-
-    // ── Account ──
-    let currentUser = null;
-    async function checkAuth() {
-      try {
-        const res = await fetch('/api/auth/me');
-        const d = await res.json();
-        currentUser = d.data;
-        const btn = document.getElementById('btn-account');
-        if (currentUser) {
-          btn.textContent = currentUser.email.split('@')[0];
-          btn.title = currentUser.email + ' (' + currentUser.plan + ')';
-        } else {
-          btn.textContent = '\u{1F464} Login';
-        }
-      } catch {}
-    }
-    checkAuth();
-
-    document.getElementById('btn-account').addEventListener('click', () => {
-      if (currentUser) {
-        const action = confirm('Logged in as ' + currentUser.email + ' (' + currentUser.plan + ' plan)\n\nLog out?');
-        if (action) {
-          fetch('/api/auth/logout', { method: 'POST' }).then(() => { currentUser = null; checkAuth(); });
-        }
-      } else {
-        window.location.href = '/login.html';
-      }
-    });
-
-    console.log('VanillaBuilder loaded. Session:', pollSessionId);
-    console.log('Bidirectional sync: editor ↔ API');
-    console.log('Agent endpoint: POST /api/execute or /api/batch with sessionId:', pollSessionId);
-  </script>
 </body>
 </html>
