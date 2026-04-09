@@ -12,6 +12,10 @@
     },
     "./css": "./dist/vanillabuilder.css"
   },
+  "bin": {
+    "vanillabuilder": "./cli.cjs",
+    "vb": "./cli.cjs"
+  },
   "files": [
     "dist/",
     "src/"

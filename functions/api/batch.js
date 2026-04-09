@@ -1,3 +1,4 @@
+import { loadSession, saveSession, sessionExists } from './_db.js';
 import { PageBuilder } from './_builder.js';
 
 export async function onRequestPost({ request, env }) {
@@ -5,22 +6,20 @@ export async function onRequestPost({ request, env }) {
   const { actions, sessionId } = body;
 
   if (!Array.isArray(actions)) return Response.json({ ok: false, error: 'Missing "actions" array' }, { status: 400 });
+  if (!sessionId) return Response.json({ ok: false, error: 'Missing "sessionId"' }, { status: 400 });
 
-  const sid = sessionId || 'default';
+  const exists = await sessionExists(env, sessionId);
+  if (!exists) return Response.json({ ok: false, error: 'Session not found. Create one first via POST /api/session' }, { status: 403 });
 
-  // Load session from KV
-  const stored = await env.SESSIONS.get(sid, 'json').catch(() => null);
+  const stored = await loadSession(env, sessionId);
   const builder = new PageBuilder(stored);
 
-  // Execute all actions
   const results = [];
   for (const action of actions) {
-    const result = builder.execute(action.method, action.params || {});
-    results.push({ method: action.method, ...result });
+    results.push({ method: action.method, ...builder.execute(action.method, action.params || {}) });
   }
 
-  // Save session to KV
-  await env.SESSIONS.put(sid, JSON.stringify(builder.toJSON()), { expirationTtl: 3600 });
+  await saveSession(env, sessionId, builder.toJSON());
 
-  return Response.json({ ok: true, sessionId: sid, results });
+  return Response.json({ ok: true, sessionId, results });
 }

@@ -219,8 +219,7 @@
         <button class="topbar__device" data-device="mobile" title="Mobile"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M15.5 1h-8C6.12 1 5 2.12 5 3.5v17C5 21.88 6.12 23 7.5 23h8c1.38 0 2.5-1.12 2.5-2.5v-17C18 2.12 16.88 1 15.5 1zm-4 21c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4.5-4H7V4h9v14z"/></svg></button>
       </div>
       <div class="topbar__actions">
-        <button class="topbar__btn" id="btn-undo" title="Undo">&#8617;</button>
-        <button class="topbar__btn" id="btn-redo" title="Redo">&#8618;</button>
+        <button class="topbar__btn" id="btn-session" title="Session info">&#128279; Session</button>
         <button class="topbar__btn" id="btn-preview">Preview</button>
         <button class="topbar__btn" id="btn-code">View Code</button>
         <button class="topbar__btn topbar__btn--primary" id="btn-save">Save</button>
@@ -277,6 +276,37 @@
         <div style="flex:1; overflow:auto;">
           <div style="padding:8px 12px; font-size:11px; color:#6c7086; border-bottom:1px solid #2a2a4a;">CSS</div>
           <pre id="code-css" style="padding:12px; font-size:12px; color:#a6e3a1; white-space:pre-wrap; word-break:break-all;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Modal -->
+  <div id="session-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:#1e1e36; border-radius:12px; width:90%; max-width:500px; overflow:hidden; border:1px solid #2a2a4a;">
+      <div style="display:flex; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #2a2a4a;">
+        <strong style="color:#cdd6f4;">Session</strong>
+        <button id="close-session-modal" style="background:none; border:none; color:#cdd6f4; font-size:20px; cursor:pointer;">&times;</button>
+      </div>
+      <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+        <div>
+          <div style="font-size:11px; color:#6c7086; text-transform:uppercase; margin-bottom:6px;">Your Session ID</div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="session-id-display" readonly style="flex:1; padding:10px 12px; background:#252542; border:1px solid #3a3a5a; border-radius:6px; color:#a78bfa; font-family:monospace; font-size:13px; outline:none;"/>
+            <button id="btn-copy-session" style="padding:10px 16px; background:#252542; border:1px solid #3a3a5a; border-radius:6px; color:#cdd6f4; cursor:pointer; font-size:13px;">Copy</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px; color:#6c7086; text-transform:uppercase; margin-bottom:6px;">Share Link</div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="session-link-display" readonly style="flex:1; padding:10px 12px; background:#252542; border:1px solid #3a3a5a; border-radius:6px; color:#89b4fa; font-size:12px; outline:none;"/>
+            <button id="btn-copy-link" style="padding:10px 16px; background:#252542; border:1px solid #3a3a5a; border-radius:6px; color:#cdd6f4; cursor:pointer; font-size:13px;">Copy</button>
+          </div>
+          <div style="font-size:11px; color:#6c7086; margin-top:6px;">Anyone with this link can view and edit this page collaboratively.</div>
+        </div>
+        <div style="border-top:1px solid #2a2a4a; padding-top:16px; display:flex; gap:8px;">
+          <button id="btn-reset-session" style="padding:10px 20px; background:#dc2626; border:none; border-radius:6px; color:white; font-size:13px; font-weight:600; cursor:pointer;">Reset Session</button>
+          <div style="font-size:11px; color:#6c7086; display:flex; align-items:center;">Creates a new session. Old link stops working.</div>
         </div>
       </div>
     </div>
@@ -726,6 +756,32 @@
       });
     });
 
+    // ── Session modal ──
+    document.getElementById('btn-session').addEventListener('click', () => {
+      document.getElementById('session-id-display').value = pollSessionId;
+      document.getElementById('session-link-display').value = window.location.origin + '/?sessionId=' + pollSessionId;
+      document.getElementById('session-modal').style.display = 'flex';
+    });
+    document.getElementById('close-session-modal').addEventListener('click', () => {
+      document.getElementById('session-modal').style.display = 'none';
+    });
+    document.getElementById('btn-copy-session').addEventListener('click', () => {
+      navigator.clipboard.writeText(pollSessionId);
+      document.getElementById('btn-copy-session').textContent = 'Copied!';
+      setTimeout(() => document.getElementById('btn-copy-session').textContent = 'Copy', 1500);
+    });
+    document.getElementById('btn-copy-link').addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.origin + '/?sessionId=' + pollSessionId);
+      document.getElementById('btn-copy-link').textContent = 'Copied!';
+      setTimeout(() => document.getElementById('btn-copy-link').textContent = 'Copy', 1500);
+    });
+    document.getElementById('btn-reset-session').addEventListener('click', () => {
+      // Delete old session from API
+      fetch('/api/session?sessionId=' + pollSessionId, { method: 'DELETE' }).catch(() => {});
+      localStorage.removeItem('vb_sessionId');
+      window.location.href = window.location.origin + '/';
+    });
+
     // ── Top bar actions ──
     document.getElementById('btn-preview').addEventListener('click', () => {
       document.getElementById('app').classList.toggle('preview-mode');
@@ -791,9 +847,34 @@
       btn.classList.toggle('active');
     });
 
+    // ── Session: each user gets a unique session ──
+    function getOrCreateSessionId() {
+      // 1. URL param takes priority (agent can share a link)
+      const urlSid = new URLSearchParams(window.location.search).get('sessionId');
+      if (urlSid) { localStorage.setItem('vb_sessionId', urlSid); return urlSid; }
+      // 2. Existing session in localStorage
+      const stored = localStorage.getItem('vb_sessionId');
+      if (stored) return stored;
+      // 3. Generate new unique session
+      const newSid = 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+      localStorage.setItem('vb_sessionId', newSid);
+      return newSid;
+    }
+    const pollSessionId = getOrCreateSessionId();
+
+    // Register session in the API (so agents can use it)
+    fetch('/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: pollSessionId }),
+    }).catch(() => {});
+
+    console.log('Session ID:', pollSessionId);
+    console.log('Share this URL to let an agent edit your page:');
+    console.log(window.location.origin + '/?sessionId=' + pollSessionId);
+
     // ── API Polling: editor auto-updates when an agent modifies the page via API ──
     let lastHtml = '';
-    const pollSessionId = new URLSearchParams(window.location.search).get('sessionId') || 'default';
 
     async function pollAPI() {
       try {

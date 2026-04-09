@@ -1,3 +1,4 @@
+import { loadSession, saveSession, sessionExists } from './_db.js';
 import { PageBuilder } from './_builder.js';
 
 export async function onRequestPost({ request, env }) {
@@ -5,18 +6,17 @@ export async function onRequestPost({ request, env }) {
   const { method, params, sessionId } = body;
 
   if (!method) return Response.json({ ok: false, error: 'Missing "method"' }, { status: 400 });
+  if (!sessionId) return Response.json({ ok: false, error: 'Missing "sessionId"' }, { status: 400 });
 
-  const sid = sessionId || 'default';
+  const exists = await sessionExists(env, sessionId);
+  if (!exists) return Response.json({ ok: false, error: 'Session not found. Create one first via POST /api/session' }, { status: 403 });
 
-  // Load session from KV
-  const stored = await env.SESSIONS.get(sid, 'json').catch(() => null);
+  const stored = await loadSession(env, sessionId);
   const builder = new PageBuilder(stored);
 
-  // Execute
   const result = builder.execute(method, params || {});
 
-  // Save session to KV (expire after 1 hour)
-  await env.SESSIONS.put(sid, JSON.stringify(builder.toJSON()), { expirationTtl: 3600 });
+  await saveSession(env, sessionId, builder.toJSON());
 
-  return Response.json({ ...result, sessionId: sid });
+  return Response.json({ ...result, sessionId });
 }
