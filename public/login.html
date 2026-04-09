@@ -48,7 +48,18 @@
       <div class="error" id="error"></div>
     </form>
 
+    <a href="#" class="skip" id="forgot-link">Forgot password?</a>
     <a href="/" class="skip">Continue without account</a>
+
+    <!-- Forgot password form (hidden) -->
+    <div id="forgot-form" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid #2a2a4a;">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="forgot-email" required />
+      </div>
+      <button class="btn" id="forgot-btn" style="background:#252542;border:1px solid #3a3a5a;">Send Reset Link</button>
+      <div class="error" id="forgot-msg" style="color:#a6e3a1;"></div>
+    </div>
   </div>
 
   <script>
@@ -93,6 +104,26 @@
 
       btn.disabled = false;
       btn.textContent = mode === 'login' ? 'Login' : 'Create Account';
+    });
+
+    document.getElementById('forgot-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      const f = document.getElementById('forgot-form');
+      f.style.display = f.style.display === 'none' ? '' : 'none';
+    });
+
+    document.getElementById('forgot-btn').addEventListener('click', async () => {
+      const email = document.getElementById('forgot-email').value;
+      if (!email) return;
+      const msg = document.getElementById('forgot-msg');
+      msg.textContent = 'Sending...';
+      try {
+        const res = await fetch('/api/auth/forgot', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email}) });
+        const d = await res.json();
+        msg.textContent = d.message || 'Check your email.';
+      } catch {
+        msg.textContent = 'Error'; msg.style.color = '#f38ba8';
+      }
     });
   </script>
 </body>

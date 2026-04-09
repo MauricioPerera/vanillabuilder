@@ -8,6 +8,9 @@ const PUBLIC_ROUTES = [
   '/api/auth/register',
   '/api/auth/logout',
   '/api/auth/me',
+  '/api/auth/forgot',
+  '/api/auth/reset',
+  '/api/auth/plan',
   '/api/billing/webhook',
 ];
 
